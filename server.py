@@ -46,8 +46,9 @@ def run_process(job_id: str, command: list[str], cwd: Path | None = None) -> int
     process = subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                text=True, bufsize=1, env=env)
     assert process.stdout
-    for line in process.stdout:
-        append_log(job_id, line)
+    with process.stdout:
+        for line in process.stdout:
+            append_log(job_id, line)
     return process.wait()
 
 
@@ -86,6 +87,7 @@ def sanitized_inputs(job_id: str, files: list[Path], workspace: Path,
     ffprobe = tool_path("ffprobe")
     if not ffmpeg or not ffprobe:
         raise ValueError("找不到 FFmpeg / FFprobe，请先安装依赖。")
+    workspace.mkdir(parents=True, exist_ok=True)
     finite: dict[Path, Path] = {}
     blank: set[Path] = set()
     for source in files:

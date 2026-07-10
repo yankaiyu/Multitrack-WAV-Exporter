@@ -56,6 +56,14 @@ Do not manually remove an existing `/usr/local/Homebrew` installation unless you
 
 The red **Uninstall app-managed dependencies** button removes only FFmpeg that this app itself installed and recorded in `~/.multitrack-wav-exporter/managed-dependencies`. It does not remove a pre-existing FFmpeg installation.
 
+## Tests
+
+The included tests generate synthetic 32-bit float WAV data only; no recording files are used. With FFmpeg installed, run:
+
+```bash
+python3 -m unittest discover -s tests
+```
+
 ---
 
 # 多轨 WAV 批量导出
@@ -115,3 +123,11 @@ kill "$(lsof -t -nP -iTCP:8765 -sTCP:LISTEN)"
 ## 卸载依赖
 
 红色的 **卸载本工具安装的依赖** 按钮只会删除本工具安装并记录在 `~/.multitrack-wav-exporter/managed-dependencies` 中的 FFmpeg，不会删除原本已有的 FFmpeg。
+
+## 测试
+
+项目自带的测试只会生成合成的 32-bit float WAV 数据，不会读取或使用任何真实录音文件。安装 FFmpeg 后可运行：
+
+```bash
+python3 -m unittest discover -s tests
+```
