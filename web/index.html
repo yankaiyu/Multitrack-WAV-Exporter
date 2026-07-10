@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-i18n="pageTitle">Multitrack WAV Exporter</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="topbar"><p class="eyebrow">MACOS · LOCAL ONLY</p><label class="language"><span data-i18n="language">Language</span><select id="language-select" aria-label="Language"><option value="en">English</option><option value="zh">中文</option></select></label></div>
+        <h1 data-i18n="appName">Multitrack WAV Exporter</h1>
+        <p class="lede" data-i18n="lede">Batch-export aligned 32-bit float WAV files as safe, shareable MP3s.</p>
+      </header>
+
+      <section class="card dependencies">
+        <div>
+          <h2 data-i18n="dependencies">Dependencies</h2>
+          <p id="dependency-status" data-i18n="checking">Checking FFmpeg and ffmpeg-normalize…</p>
+        </div>
+        <div class="button-row">
+          <button id="install-button" class="secondary" data-i18n="install">Install / Repair</button>
+          <button id="uninstall-button" class="text-button" data-i18n="uninstall">Uninstall app-managed dependencies</button>
+        </div>
+      </section>
+
+      <form id="convert-form" class="card">
+        <h2 data-i18n="exportSettings">Export settings</h2>
+        <label class="path-field">
+          <span data-i18n="sourceFolder">Source folder</span>
+          <div class="source-row"><input id="source" name="source" type="text" placeholder="/Users/you/Music/Practice/2026-07-09" required /><button id="choose-folder" type="button" class="secondary" data-i18n="choose">Choose…</button></div>
+          <small data-i18n-html="sourceHelp">Reads WAVs directly inside this folder; exports to <code>normalized_mp3</code>.</small>
+        </label>
+
+        <fieldset>
+          <legend data-i18n="levelProcessing">Level processing</legend>
+          <label class="radio-choice">
+            <input type="radio" name="mode" value="per_track" checked />
+            <span><strong data-i18n="perTrack">Normalize each track</strong><small data-i18n="perTrackHelp">Best for pre-fader recordings. Adjust each track independently, then remix after import.</small></span>
+          </label>
+          <label class="radio-choice">
+            <input type="radio" name="mode" value="preserve" />
+            <span><strong data-i18n="preserve">Preserve relative levels</strong><small data-i18n="preserveHelp">Apply one gain to the whole group, retaining the original balance.</small></span>
+          </label>
+          <label class="radio-choice">
+            <input type="radio" name="mode" value="convert" />
+            <span><strong data-i18n="convert">Keep levels where safe</strong><small data-i18n="convertHelp">Only lower and re-encode a track if its encoded MP3 exceeds the safety ceiling.</small></span>
+          </label>
+        </fieldset>
+
+        <div class="grid">
+          <label>
+            <span data-i18n="bitrate">MP3 bitrate</span>
+            <select name="bitrate">
+              <option value="128">128 kbps</option><option value="160">160 kbps</option><option value="192">192 kbps</option>
+              <option value="224">224 kbps</option><option value="256" selected data-i18n="recommendedBitrate">256 kbps (recommended)</option><option value="320">320 kbps</option>
+            </select>
+          </label>
+          <label>
+            <span data-i18n="sampleRate">Sample rate</span>
+            <select name="sampleRate">
+              <option value="" data-i18n="keepOriginal">Keep original (recommended)</option><option value="48000">48 kHz</option><option value="44100">44.1 kHz</option>
+              <option value="32000">32 kHz</option><option value="24000">24 kHz</option>
+            </select>
+          </label>
+          <label>
+            <span data-i18n="safePeak">Final MP3 safety ceiling</span>
+            <select name="ceiling" id="ceiling">
+              <option value="-1">-1.0 dBFS</option><option value="-1.5">-1.5 dBFS</option><option value="-2" selected data-i18n="recommendedCeiling">-2.0 dBFS (recommended)</option><option value="-3">-3.0 dBFS</option>
+            </select>
+          </label>
+        </div>
+        <p class="notice" data-i18n="notice">Every mode checks decoded MP3 peaks. When a peak exceeds the ceiling, it re-encodes from the original WAV at a lower level to avoid clipping.</p>
+        <label class="checkbox"><input type="checkbox" name="packageZip" checked /> <span data-i18n="zip">Also create a ZIP share package (AirDrop, cloud drive, or bandmates)</span></label>
+        <button id="convert-button" class="primary" type="submit" data-i18n="start">Start export</button>
+      </form>
+
+      <section id="job-panel" class="card hidden" aria-live="polite">
+        <div class="job-heading"><h2 id="job-title" data-i18n="processing">Processing…</h2><span id="job-state" class="pill" data-i18n="running">Running</span></div>
+        <pre id="job-log"></pre>
+        <p id="output-path"></p><button id="open-output" type="button" class="secondary hidden" data-i18n="openFinder">Open in Finder</button>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>
