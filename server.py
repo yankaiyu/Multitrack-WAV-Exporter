@@ -288,5 +288,6 @@ class Handler(SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = 8765
+    httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     print(f"Multitrack WAV Exporter is running at http://127.0.0.1:{port}")
-    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
+    httpd.serve_forever()

@@ -12,6 +12,18 @@ python3 server.py
 
 打开 <http://127.0.0.1:8765>。点击「选择…」将调用 macOS 原生文件夹选择器。首次使用请在网页「依赖」区域点击安装；它使用 Homebrew 安装 FFmpeg。
 
+## 启动与停止
+
+一次只能运行一个本地服务。再次双击 `start.command` 时，它会自动复用已运行的服务并打开浏览器，不会发生端口冲突。
+
+若要完全停止服务，请关闭其 Terminal 窗口；如果窗口已经关闭但服务仍在运行，可在 Terminal 执行：
+
+```bash
+kill "$(lsof -t -nP -iTCP:8765 -sTCP:LISTEN)"
+```
+
+之后再次双击 `start.command`，即可启动最新版本。
+
 运行网页服务需要 macOS 自带或已安装的 Python 3。若系统提示尚未接受 Xcode Command Line Tools 许可，请在 Terminal 运行一次 `sudo xcodebuild -license` 并按提示接受；之后重新双击 `start.command`。
 
 如果依赖安装提示 Homebrew Ruby 语法错误，请先修复 Homebrew 本身。Apple Silicon Mac 的官方默认 Homebrew 位置是 `/opt/homebrew`；官方安装脚本会先展示将执行的操作并要求确认：
