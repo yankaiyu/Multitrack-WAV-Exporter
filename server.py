@@ -220,10 +220,12 @@ class Handler(SimpleHTTPRequestHandler):
             elif self.path == "/api/select-folder":
                 # This is intentionally macOS-only. The server is bound to 127.0.0.1.
                 prompt = "Select the folder containing WAV tracks" if data.get("language") == "en" else "选择包含 WAV 多轨的歌曲文件夹"
-                result = subprocess.run(["/usr/bin/osascript", "-e", f"POSIX path of (choose folder with prompt {json.dumps(prompt)})"],
+                # Do not JSON-escape this string: AppleScript does not interpret \uXXXX escapes.
+                apple_prompt = prompt.replace('"', '\\"')
+                result = subprocess.run(["/usr/bin/osascript", "-e", f"POSIX path of (choose folder with prompt \"{apple_prompt}\")"],
                                         capture_output=True, text=True)
                 if result.returncode != 0:
-                    self.json_response({"cancelled": True})
+                    self.json_response({"cancelled": True, "error": result.stderr.strip()})
                 else:
                     self.json_response({"path": result.stdout.strip()})
             elif self.path == "/api/open-folder":
