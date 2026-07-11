@@ -71,22 +71,71 @@ class FloatAudioPipelineTests(unittest.TestCase):
         write_float_wav(hot, [4.0] * 4_800)
         write_float_wav(hot_two, [2.0] * 4_800)
         write_float_wav(skipped, [0.25] * 4_800)
-        old_output = source / "normalized_mp3"
+        old_output = source / "normalized_audio"
         old_output.mkdir()
         (old_output / "stale.mp3").write_bytes(b"not a real MP3")
         server.convert_job(self.job_id, {
             "source": str(source), "selectedFiles": [hot.name, hot_two.name], "mode": "per_track",
             "bitrate": "128", "sampleRate": "", "ceiling": "-2", "silenceThreshold": "-40", "workers": "2", "packageZip": "on",
         })
-        output = source / "normalized_mp3"
+        output = source / "normalized_audio"
         self.assertEqual(server.JOBS[self.job_id]["status"], "done", server.JOBS[self.job_id]["log"])
         self.assertTrue((output / "hot.mp3").is_file())
         self.assertTrue((output / "hot-two.mp3").is_file())
         self.assertFalse((output / "skip.mp3").exists())
         self.assertLessEqual(server.peak_of_mp3(output / "hot.mp3"), -2.0)
         self.assertLessEqual(server.peak_of_mp3(output / "hot-two.mp3"), -2.0)
-        with zipfile.ZipFile(source / f"{source.name}_normalized_mp3.zip") as archive:
+        with zipfile.ZipFile(source / f"{source.name}_normalized_audio.zip") as archive:
             self.assertEqual(set(archive.namelist()), {"hot.mp3", "hot-two.mp3"})
+
+    def test_wav_pcm24_output_is_safe_and_has_requested_codec(self) -> None:
+        source = self.root / "wav-output"
+        source.mkdir()
+        hot = source / "hot.wav"
+        write_float_wav(hot, [4.0] * 4_800)
+        server.convert_job(self.job_id, {
+            "source": str(source), "mode": "per_track", "outputFormat": "wav", "wavDepth": "pcm24",
+            "bitrate": "256", "sampleRate": "", "ceiling": "-2", "silenceThreshold": "-40", "workers": "1",
+        })
+        output = source / "normalized_audio" / "hot.wav"
+        self.assertEqual(server.JOBS[self.job_id]["status"], "done", server.JOBS[self.job_id]["log"])
+        self.assertTrue(output.is_file())
+        self.assertLessEqual(server.peak_of_audio(output), -2.0)
+        ffprobe = server.tool_path("ffprobe")
+        codec = subprocess.run([ffprobe, "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_name",
+                                "-of", "default=nokey=1:noprint_wrappers=1", str(output)], capture_output=True, text=True, check=True)
+        self.assertEqual(codec.stdout.strip(), "pcm_s24le")
+
+    def test_m4a_output_is_safe(self) -> None:
+        source = self.root / "m4a-output"
+        source.mkdir()
+        hot = source / "hot.wav"
+        write_float_wav(hot, [4.0] * 4_800)
+        server.convert_job(self.job_id, {
+            "source": str(source), "mode": "per_track", "outputFormat": "m4a", "bitrate": "128",
+            "sampleRate": "", "ceiling": "-2", "silenceThreshold": "-40", "workers": "1",
+        })
+        output = source / "normalized_audio" / "hot.m4a"
+        self.assertEqual(server.JOBS[self.job_id]["status"], "done", server.JOBS[self.job_id]["log"])
+        self.assertTrue(output.is_file())
+        self.assertLessEqual(server.peak_of_audio(output), -2.0)
+
+    def test_flac_input_is_discovered_and_exported(self) -> None:
+        source = self.root / "flac-input"
+        source.mkdir()
+        wav = source / "source.wav"
+        flac = source / "source.flac"
+        write_float_wav(wav, [0.5] * 4_800)
+        ffmpeg = server.tool_path("ffmpeg")
+        subprocess.run([ffmpeg, "-y", "-i", str(wav), str(flac)], capture_output=True, check=True)
+        wav.unlink()
+        server.convert_job(self.job_id, {
+            "source": str(source), "mode": "per_track", "outputFormat": "mp3", "bitrate": "128",
+            "sampleRate": "", "ceiling": "-2", "silenceThreshold": "-40", "workers": "1",
+        })
+        output = source / "normalized_audio" / "source.mp3"
+        self.assertEqual(server.JOBS[self.job_id]["status"], "done", server.JOBS[self.job_id]["log"])
+        self.assertTrue(output.is_file())
 
 
 if __name__ == "__main__":

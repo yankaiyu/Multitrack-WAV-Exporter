@@ -3,7 +3,7 @@ set -euo pipefail
 
 export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
 
-STATE_FILE="$HOME/.multitrack-wav-exporter/managed-dependencies"
+STATE_FILE="$HOME/.multitrack-audio-exporter/managed-dependencies"
 if [ ! -f "$STATE_FILE" ]; then
   echo "未发现由本工具安装的依赖，因此没有删除任何内容。"
   exit 0

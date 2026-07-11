@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local web UI and conversion backend for multitrack WAV exports."""
+"""Local web UI and conversion backend for multitrack audio exports."""
 
 from __future__ import annotations
 
@@ -31,6 +31,13 @@ SOURCE_LOCKS: dict[str, threading.Lock] = {}
 SOURCE_LOCKS_LOCK = threading.Lock()
 LAST_CLIENT_ACTIVITY = time.monotonic()
 IDLE_SHUTDOWN_SECONDS = 60
+INPUT_EXTENSIONS = {".wav", ".aif", ".aiff", ".flac", ".mp3", ".m4a", ".aac"}
+OUTPUT_FORMATS = {
+    "mp3": {"extension": ".mp3", "codec": "libmp3lame"},
+    "m4a": {"extension": ".m4a", "codec": "aac"},
+    "wav": {"extension": ".wav", "codec": None},
+}
+WAV_CODECS = {"float32": "pcm_f32le", "pcm24": "pcm_s24le", "pcm16": "pcm_s16le"}
 
 
 def tool_path(name: str) -> str | None:
@@ -145,7 +152,9 @@ def sanitized_inputs(job_id: str, files: list[Path], workspace: Path,
         except ValueError:
             raise RuntimeError(f"无法读取声道数：{source.name}")
         expressions = "|".join(f"if(isnan(val({channel}))+isinf(val({channel})),0,val({channel}))" for channel in range(channels))
-        cleaned = workspace / source.name
+        # Working files are always WAV. Retaining an MP3/M4A input extension here
+        # would make FFmpeg select the wrong container for float PCM.
+        cleaned = workspace / f"{uuid.uuid4().hex}.wav"
         per_track = track_trims.get(source.name, {})
         source_start = float(per_track.get("start", trim_start))
         raw_end = per_track.get("end", trim_end)
@@ -167,7 +176,7 @@ def sanitized_inputs(job_id: str, files: list[Path], workspace: Path,
         # that residue to full scale: only material above the user-set threshold is active.
         if peak is None or peak <= silence_threshold:
             blank.add(source)
-            append_log(job_id, f"{source.name} 峰值 {peak if peak is not None else '未知'} dBFS，低于无输入阈值 {silence_threshold:.0f} dBFS：仅转 MP3，不归一化。\n")
+            append_log(job_id, f"{source.name} 峰值 {peak if peak is not None else '未知'} dBFS，低于无输入阈值 {silence_threshold:.0f} dBFS：仅转换，不归一化。\n")
     return finite, blank
 
 
@@ -175,13 +184,13 @@ def waveform_job(job_id: str, source_text: str) -> None:
     """Generate compact cached waveform PNGs for the trimming UI."""
     try:
         source = Path(source_text).expanduser().resolve()
-        files = sorted(p for p in source.iterdir() if p.is_file() and p.suffix.lower() == ".wav")
+        files = sorted(p for p in source.iterdir() if p.is_file() and p.suffix.lower() in INPUT_EXTENSIONS)
         ffmpeg, ffprobe = tool_path("ffmpeg"), tool_path("ffprobe")
         if not files:
-            raise ValueError("该文件夹中没有 WAV 文件。")
+            raise ValueError("该文件夹中没有支持的音频文件。")
         if not ffmpeg or not ffprobe:
             raise ValueError("找不到 FFmpeg / FFprobe，请先安装依赖。")
-        cache = source / ".multitrack-wav-exporter-preview"
+        cache = source / ".multitrack-audio-exporter-preview"
         cache.mkdir(exist_ok=True)
         previews = []
         for index, file in enumerate(files):
@@ -191,8 +200,8 @@ def waveform_job(job_id: str, source_text: str) -> None:
             duration_result = subprocess.run([ffprobe, "-v", "error", "-show_entries", "format=duration",
                                               "-of", "default=nokey=1:noprint_wrappers=1", str(file)], capture_output=True, text=True)
             duration = float(duration_result.stdout.strip())
-            image = cache / f"{file.stem}.png"
-            # Regenerate only when the WAV changed. The aeval stage removes non-finite
+            image = cache / f"{file.name}.png"
+            # Regenerate only when the source changed. The aeval stage removes non-finite
             # float samples before showwavespic draws the visual preview.
             if not image.exists() or image.stat().st_mtime_ns < file.stat().st_mtime_ns:
                 expressions = "|".join(f"if(isnan(val({channel}))+isinf(val({channel})),0,val({channel}))" for channel in range(channels))
@@ -218,12 +227,15 @@ def waveform_job(job_id: str, source_text: str) -> None:
             JOBS[job_id]["status"] = "error"
 
 
-def encode_mp3(job_id: str, ffmpeg: str, input_file: Path, output_file: Path, bitrate: int,
-               sample_rate: int | None, gain_db: float | None = None) -> None:
+def encode_audio(job_id: str, ffmpeg: str, input_file: Path, output_file: Path, output_format: str,
+                 bitrate: int, wav_depth: str, sample_rate: int | None, gain_db: float | None = None) -> None:
     command = [ffmpeg, "-y", "-threads", "1", "-i", str(input_file)]
     if gain_db is not None:
         command += ["-af", f"volume={gain_db:.4f}dB"]
-    command += ["-c:a", "libmp3lame", "-b:a", f"{bitrate}k"]
+    if output_format == "wav":
+        command += ["-c:a", WAV_CODECS[wav_depth]]
+    else:
+        command += ["-c:a", OUTPUT_FORMATS[output_format]["codec"], "-b:a", f"{bitrate}k"]
     if sample_rate:
         command += ["-ar", str(sample_rate)]
     command.append(str(output_file))
@@ -252,9 +264,9 @@ def _convert_job(job_id: str, options: dict) -> None:
         source = Path(options["source"]).expanduser().resolve()
         if not source.is_dir():
             raise ValueError("源文件夹不存在。")
-        files = sorted([p for p in source.iterdir() if p.is_file() and p.suffix.lower() == ".wav"])
+        files = sorted([p for p in source.iterdir() if p.is_file() and p.suffix.lower() in INPUT_EXTENSIONS])
         if not files:
-            raise ValueError("该文件夹中没有 WAV 文件。")
+            raise ValueError("该文件夹中没有支持的音频文件。")
         selected = options.get("selectedFiles")
         if selected is not None:
             if isinstance(selected, str):
@@ -264,6 +276,12 @@ def _convert_job(job_id: str, options: dict) -> None:
             if not files:
                 raise ValueError("请至少选择一条要转换的轨道。")
         mode = options["mode"]
+        output_format = options.get("outputFormat", "mp3")
+        if output_format not in OUTPUT_FORMATS:
+            raise ValueError("无效的输出格式。")
+        wav_depth = options.get("wavDepth", "float32")
+        if wav_depth not in WAV_CODECS:
+            raise ValueError("无效的 WAV 位深。")
         bitrate = int(options["bitrate"])
         sample_rate = options.get("sampleRate")
         sample_rate = int(sample_rate) if sample_rate else None
@@ -279,15 +297,24 @@ def _convert_job(job_id: str, options: dict) -> None:
             raise ValueError("逐轨裁剪数据无效。")
         if trim_start < 0 or (trim_end is not None and trim_end <= trim_start):
             raise ValueError("裁剪结束时间必须大于开始时间。")
-        output = source / "normalized_mp3"
+        output = source / "normalized_audio"
         output.mkdir(exist_ok=True)
-        append_log(job_id, f"将转换 {len(files)} 个 WAV，输出：{output}\n")
+        output_extension = OUTPUT_FORMATS[output_format]["extension"]
+        used_names: set[str] = set()
+        output_files: dict[Path, Path] = {}
+        for source_file in files:
+            stem = source_file.stem
+            if stem in used_names:
+                stem = f"{stem}_{source_file.suffix.lstrip('.')}"
+            used_names.add(stem)
+            output_files[source_file] = output / f"{stem}{output_extension}"
+        append_log(job_id, f"将转换 {len(files)} 个音频文件，输出：{output}\n")
         set_progress(job_id, 2, f"准备处理 {len(files)} 条轨道")
 
         ffmpeg = tool_path("ffmpeg")
         if not ffmpeg:
             raise ValueError("找不到 FFmpeg，请先安装依赖。")
-        with tempfile.TemporaryDirectory(prefix="multitrack-wav-export-") as temp:
+        with tempfile.TemporaryDirectory(prefix="multitrack-audio-export-") as temp:
             set_progress(job_id, 5, "清洗浮点样本并测量峰值")
             cleaned, blank = sanitized_inputs(job_id, files, Path(temp), silence_threshold, trim_start, trim_end, workers, track_trims)
             set_progress(job_id, 20, "浮点样本清洗完成")
@@ -304,7 +331,7 @@ def _convert_job(job_id: str, options: dict) -> None:
                     set_progress(job_id, 20 + round(65 * completed / total_tracks), f"已编码 {completed}/{total_tracks} 条轨道")
 
             def encode_blank(file: Path) -> None:
-                encode_mp3(job_id, ffmpeg, cleaned[file], output / f"{file.stem}.mp3", bitrate, sample_rate)
+                encode_audio(job_id, ffmpeg, cleaned[file], output_files[file], output_format, bitrate, wav_depth, sample_rate)
                 mark_encoded(file)
 
             parallel_map(list(blank), workers, encode_blank)
@@ -312,14 +339,14 @@ def _convert_job(job_id: str, options: dict) -> None:
             if mode == "convert":
                 target = ceiling - 0.2
                 def convert_safely(file: Path) -> None:
-                    output_file = output / f"{file.stem}.mp3"
+                    output_file = output_files[file]
                     input_peak = peak_of_audio(cleaned[file])
                     if input_peak is None:
                         raise RuntimeError(f"无法测量清洗后轨道的峰值：{file.name}")
                     # Keep the original level unless the float source already exceeds the
-                    # output ceiling. Measuring before MP3 encoding avoids hidden clipping.
+                    # output ceiling. Measuring before encoding avoids hidden clipping.
                     gain = min(0.0, target - input_peak)
-                    encode_mp3(job_id, ffmpeg, cleaned[file], output_file, bitrate, sample_rate, gain)
+                    encode_audio(job_id, ffmpeg, cleaned[file], output_file, output_format, bitrate, wav_depth, sample_rate, gain)
                     for _ in range(3):
                         peak = peak_of_mp3(output_file)
                         if peak is None or peak <= ceiling:
@@ -327,13 +354,13 @@ def _convert_job(job_id: str, options: dict) -> None:
                         attenuation = (peak - ceiling) + 0.2
                         append_log(job_id, f"{file.name} 编码后峰值 {peak:.2f} dBFS，降低 {attenuation:.2f} dB 后重编码。\n")
                         gain -= attenuation
-                        encode_mp3(job_id, ffmpeg, cleaned[file], output_file, bitrate, sample_rate, gain)
+                        encode_audio(job_id, ffmpeg, cleaned[file], output_file, output_format, bitrate, wav_depth, sample_rate, gain)
                     else:
                         raise RuntimeError(f"无法让 {file.name} 满足安全峰值上限。")
                     mark_encoded(file)
                 parallel_map(active, workers, convert_safely)
             elif active:
-                # ffmpeg-normalize's peak scanner can mis-handle NaN-bearing float WAVs.
+                # Peak scanners can mis-handle NaN-bearing float WAVs.
                 # Measure the cleaned PCM with FFmpeg itself and apply a deterministic linear gain.
                 target = ceiling - 0.2
                 input_peaks = {file: peak_of_audio(cleaned[file]) for file in active}
@@ -347,10 +374,10 @@ def _convert_job(job_id: str, options: dict) -> None:
                 append_log(job_id, "归一化增益：" + ", ".join(f"{file.name} {gain:+.2f} dB" for file, gain in gains.items()) + "\n")
                 for _ in range(3):
                     def encode_normalized(file: Path) -> None:
-                        encode_mp3(job_id, ffmpeg, cleaned[file], output / f"{file.stem}.mp3", bitrate, sample_rate, gains[file])
+                        encode_audio(job_id, ffmpeg, cleaned[file], output_files[file], output_format, bitrate, wav_depth, sample_rate, gains[file])
                         mark_encoded(file)
                     parallel_map(active, workers, encode_normalized)
-                    measured = dict(parallel_map(active, workers, lambda file: (file, peak_of_mp3(output / f"{file.stem}.mp3"))))
+                    measured = dict(parallel_map(active, workers, lambda file: (file, peak_of_audio(output_files[file]))))
                     overs = {file: peak - ceiling for file, peak in measured.items() if peak is not None and peak > ceiling}
                     append_log(job_id, "编码后峰值：" + ", ".join(f"{file.name} {peak:.2f} dBFS" for file, peak in measured.items() if peak is not None) + "\n")
                     if not overs:
@@ -364,26 +391,25 @@ def _convert_job(job_id: str, options: dict) -> None:
                     else:
                         for file, amount in overs.items():
                             gains[file] -= amount + 0.2
-                    append_log(job_id, "峰值高于安全上限，降低增益后从清洗 WAV 重编码。\n")
+                    append_log(job_id, "峰值高于安全上限，降低增益后从清洗音频重新编码。\n")
                 else:
                     raise RuntimeError("三次安全验证后仍无法满足输出峰值上限。")
 
-        # Final report is intentionally based on the generated MP3 rather than the source WAV.
-        set_progress(job_id, 90, "验证最终 MP3 峰值")
-        final_peaks = {p.name: peak_of_mp3(output / f"{p.stem}.mp3") for p in files}
+        # Final report is intentionally based on generated files rather than sources.
+        set_progress(job_id, 90, "验证最终输出峰值")
+        final_peaks = {p.name: peak_of_audio(output_files[p]) for p in files}
         failed = [name for name, peak in final_peaks.items() if peak is not None and peak > ceiling]
         if failed:
             raise RuntimeError("最终安全验证失败：" + "、".join(failed))
-        append_log(job_id, "最终 MP3 峰值验证通过。\n")
+        append_log(job_id, "最终输出峰值验证通过。\n")
         zip_path = None
         if options.get("packageZip"):
             set_progress(job_id, 96, "创建分享 ZIP")
-            zip_path = str(source / f"{source.name}_normalized_mp3.zip")
-            # Package only the tracks selected for this job, never stale files left
-            # in normalized_mp3 by a previous selection.
+            zip_path = str(source / f"{source.name}_normalized_audio.zip")
+            # Package only tracks selected for this job, never stale prior exports.
             with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
                 for source_file in files:
-                    exported = output / f"{source_file.stem}.mp3"
+                    exported = output_files[source_file]
                     if exported.is_file():
                         archive.write(exported, exported.name)
             append_log(job_id, f"已创建分享 ZIP：{zip_path}\n")
@@ -474,7 +500,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.json_response({"job": job_id})
             elif self.path == "/api/select-folder":
                 # This is intentionally macOS-only. The server is bound to 127.0.0.1.
-                prompt = "Select the folder containing WAV tracks" if data.get("language") == "en" else "选择包含 WAV 多轨的歌曲文件夹"
+                prompt = "Select the folder containing audio tracks" if data.get("language") == "en" else "选择包含多轨音频的歌曲文件夹"
                 # Do not JSON-escape this string: AppleScript does not interpret \uXXXX escapes.
                 apple_prompt = prompt.replace('"', '\\"')
                 result = subprocess.run(["/usr/bin/osascript", "-e", f"POSIX path of (choose folder with prompt \"{apple_prompt}\")"],
@@ -498,6 +524,6 @@ class Handler(SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     port = 8765
     httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
-    print(f"Multitrack WAV Exporter is running at http://127.0.0.1:{port}")
+    print(f"Multitrack Audio Exporter is running at http://127.0.0.1:{port}")
     threading.Thread(target=idle_shutdown_monitor, args=(httpd,), daemon=True).start()
     httpd.serve_forever()

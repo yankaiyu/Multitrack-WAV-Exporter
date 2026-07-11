@@ -7,7 +7,7 @@ URL="http://127.0.0.1:8765"
 if /usr/bin/curl --silent --fail "$URL/api/status" >/dev/null 2>&1; then
   EXISTING_PID=$(/usr/sbin/lsof -t -nP -iTCP:8765 -sTCP:LISTEN 2>/dev/null | /usr/bin/head -n 1)
   /usr/bin/open "$URL"
-  echo "Multitrack WAV Exporter is already running${EXISTING_PID:+ (PID $EXISTING_PID)}. Opened it in your browser."
+  echo "Multitrack Audio Exporter is already running${EXISTING_PID:+ (PID $EXISTING_PID)}. Opened it in your browser."
   exit 0
 fi
 

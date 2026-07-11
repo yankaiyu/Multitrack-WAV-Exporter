@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title data-i18n="pageTitle">Multitrack WAV Exporter</title>
+    <title data-i18n="pageTitle">Multitrack Audio Exporter</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <main>
       <header>
         <div class="topbar"><p class="eyebrow">MACOS · LOCAL ONLY</p><label class="language"><span class="language-icon" aria-hidden="true">🌐</span><span data-i18n="language">Language</span><select id="language-select" aria-label="Language"><option value="en">English</option><option value="zh">中文</option></select></label></div>
-        <h1 data-i18n="appName">Multitrack WAV Exporter</h1>
+        <h1 data-i18n="appName">Multitrack Audio Exporter</h1>
         <p class="lede" data-i18n="lede">Batch-export 32-bit float WAV files as safe, shareable MP3s.</p>
       </header>
 
@@ -30,7 +30,7 @@
         <label class="path-field">
           <span data-i18n="sourceFolder">Source folder</span>
           <div class="source-row"><input id="source" name="source" type="text" placeholder="/Users/you/Music/Practice/2026-07-09" required /><button id="choose-folder" type="button" class="secondary" data-i18n="choose">Choose…</button></div>
-          <small data-i18n-html="sourceHelp">Reads WAVs directly inside this folder; exports to <code>normalized_mp3</code>.</small>
+          <small data-i18n-html="sourceHelp">Reads supported audio files in this folder; exports to <code>normalized_audio</code>.</small>
         </label>
 
         <section class="trim-section">
@@ -64,11 +64,21 @@
 
         <div class="grid">
           <label>
-            <span data-i18n="bitrate">MP3 bitrate</span>
+            <span data-i18n="outputFormat">Output format</span>
+            <select id="output-format" name="outputFormat">
+              <option value="mp3" data-i18n="formatMp3">MP3</option><option value="m4a" data-i18n="formatM4a">M4A (AAC)</option><option value="wav" data-i18n="formatWav">WAV</option>
+            </select>
+          </label>
+          <label id="bitrate-field">
+            <span id="bitrate-label" data-i18n="bitrate">MP3 bitrate</span>
             <select name="bitrate">
               <option value="128">128 kbps</option><option value="160">160 kbps</option><option value="192">192 kbps</option>
               <option value="224">224 kbps</option><option value="256" selected data-i18n="recommendedBitrate">256 kbps (recommended)</option><option value="320">320 kbps</option>
             </select>
+          </label>
+          <label id="wav-depth-field" class="hidden">
+            <span data-i18n="wavDepth">WAV bit depth</span>
+            <select name="wavDepth"><option value="float32" data-i18n="wavFloat32">32-bit float (recommended)</option><option value="pcm24" data-i18n="wavPcm24">24-bit PCM</option><option value="pcm16" data-i18n="wavPcm16">16-bit PCM</option></select>
           </label>
           <label>
             <span data-i18n="sampleRate">Sample rate</span>
@@ -78,7 +88,7 @@
             </select>
           </label>
           <label>
-            <span data-i18n="safePeak">Final MP3 safety ceiling</span>
+            <span data-i18n="safePeak">Final output safety ceiling</span>
             <select name="ceiling" id="ceiling">
               <option value="-1">-1.0 dBFS</option><option value="-1.5">-1.5 dBFS</option><option value="-2" selected data-i18n="recommendedCeiling">-2.0 dBFS (recommended)</option><option value="-3">-3.0 dBFS</option>
             </select>

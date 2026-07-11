@@ -3,7 +3,7 @@ set -euo pipefail
 
 export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
 
-STATE_DIR="$HOME/.multitrack-wav-exporter"
+STATE_DIR="$HOME/.multitrack-audio-exporter"
 STATE_FILE="$STATE_DIR/managed-dependencies"
 mkdir -p "$STATE_DIR"
 
