@@ -36,6 +36,8 @@ class LocaleTests(unittest.TestCase):
         self.assertEqual(server.localized("en", "waitingToStart"), "Waiting to start")
         self.assertEqual(server.localized("zh", "waitingToStart"), "等待开始")
         self.assertIn("FFmpeg", server.localized("en", "missingFfmpeg"))
+        self.assertIn("プリフェーダー", server.localized("ja", "perTrackHelp"))
+        self.assertIn("音声ファイル", server.localized("ja", "convertingFiles", count=1, output="out"))
 
 
 @unittest.skipUnless(server.tool_path("ffmpeg") and server.tool_path("ffprobe"), "FFmpeg and FFprobe are required")
