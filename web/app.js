@@ -1,11 +1,11 @@
 const $ = (selector) => document.querySelector(selector);
 let poller;
 const translations = {
-  en: { pageTitle:"Multitrack WAV Exporter", appName:"Multitrack WAV Exporter", language:"Language", lede:"Batch-export aligned 32-bit float WAV files as safe, shareable MP3s.", dependencies:"Dependencies", checking:"Checking FFmpeg…", install:"Install / Repair", uninstall:"Uninstall app-managed dependencies", exportSettings:"Export settings", sourceFolder:"Source folder", choose:"Choose…", sourceHelp:"Reads WAVs directly inside this folder; exports to <code>normalized_mp3</code>.", levelProcessing:"Level processing", perTrack:"Normalize each track", perTrackHelp:"Best for pre-fader recordings. Adjust each track independently, then remix after import.", preserve:"Preserve relative levels", preserveHelp:"Apply one gain to the whole group, retaining the original balance.", convert:"Keep levels where safe", convertHelp:"Only lower and re-encode a track if its encoded MP3 exceeds the safety ceiling.", bitrate:"MP3 bitrate", recommendedBitrate:"256 kbps (recommended)", sampleRate:"Sample rate", keepOriginal:"Keep original (recommended)", safePeak:"Final MP3 safety ceiling", recommendedCeiling:"-2.0 dBFS (recommended)", silenceThreshold:"Empty-track threshold", onlyDigital:"-90 dBFS (only digital silence)", recommendedThreshold:"-40 dBFS (recommended)", notice:"Every mode cleans NaN/Infinity float samples, measures the real peak, then checks decoded MP3 peaks. Signals above 0 dBFS are safely reduced before encoding.", zip:"Also create a ZIP share package (AirDrop, cloud drive, or bandmates)", start:"Start export", processing:"Processing…", running:"Running", done:"Done", error:"Error", openFinder:"Open in Finder", ready:"Ready: FFmpeg is available.", missingFfmpeg:"FFmpeg is not ready.", unable:"Unable to check dependencies: ", installConfirm:"This will use Homebrew to install missing local dependencies. Continue?", uninstallConfirm:"Only dependencies installed and recorded by this app will be removed. Continue?", output:"Output folder: ", zipOutput:"Share ZIP: ", selectionCancelled:"No folder was selected." },
-  zh: { pageTitle:"多轨 WAV 批量导出", appName:"多轨 WAV 批量导出", language:"语言", lede:"把多个对齐的 32-bit float WAV 安全批量导出为便于分享的 MP3。", dependencies:"运行依赖", checking:"正在检查 FFmpeg…", install:"安装 / 修复依赖", uninstall:"卸载本工具安装的依赖", exportSettings:"导出设置", sourceFolder:"歌曲文件夹", choose:"选择…", sourceHelp:"读取此文件夹第一层中的 WAV；输出至 <code>normalized_mp3</code>。", levelProcessing:"音量处理", perTrack:"每轨标准化", perTrackHelp:"适合 pre-fader 原始录音。每条轨道独立调整，导入后重新混音。", preserve:"保持相对响度", preserveHelp:"整组轨道使用同一增益，保留原有轨间平衡。", convert:"尽量保持原音量，仅安全降幅", convertHelp:"仅当编码后超过安全上限时，才降低该轨并重编码。", bitrate:"MP3 比特率", recommendedBitrate:"256 kbps（推荐）", sampleRate:"采样率", keepOriginal:"保持原始（推荐）", safePeak:"最终 MP3 安全峰值", recommendedCeiling:"-2.0 dBFS（推荐）", silenceThreshold:"无输入/底噪阈值", onlyDigital:"-90 dBFS（仅数字静音）", recommendedThreshold:"-40 dBFS（推荐）", notice:"所有模式都会先清洗 NaN / Infinity 浮点样本、测量实际峰值，再检查解码后的 MP3 峰值。高于 0 dBFS 的 32-bit float 信号会在编码前安全降低。", zip:"同时创建 ZIP 分享包（方便 AirDrop、网盘或发送给队友）", start:"开始转换", processing:"正在处理…", running:"运行中", done:"完成", error:"出错", openFinder:"在 Finder 中打开", ready:"已就绪：FFmpeg 可用。", missingFfmpeg:"FFmpeg 未就绪。", unable:"无法检查依赖：", installConfirm:"将通过 Homebrew 安装缺少的本地依赖。继续？", uninstallConfirm:"只会卸载本工具曾安装并记录的依赖。继续？", output:"输出文件夹：", zipOutput:"分享 ZIP：", selectionCancelled:"未选择文件夹。" }
+  en: { pageTitle:"Multitrack WAV Exporter", appName:"Multitrack WAV Exporter", language:"Language", lede:"Batch-export 32-bit float WAV files as safe, shareable MP3s.", dependencies:"Dependencies", checking:"Checking FFmpeg…", install:"↓ Install / Repair", uninstall:"Uninstall app-managed dependencies", exportSettings:"Export settings", sourceFolder:"Source folder", choose:"Choose…", sourceHelp:"Reads WAVs in this folder; outputs to <code>normalized_mp3</code>.", levelProcessing:"Level processing", perTrack:"Normalize each track", perTrackHelp:"Best for pre-fader recordings. Adjust each track independently, then remix after import.", preserve:"Preserve relative levels", preserveHelp:"Apply one gain to the whole group, retaining the original balance.", convert:"Keep levels where safe", convertHelp:"Only lower and re-encode a track if its encoded MP3 exceeds the safety ceiling.", bitrate:"MP3 bitrate", recommendedBitrate:"256 kbps (recommended)", sampleRate:"Sample rate", keepOriginal:"Keep original (recommended)", safePeak:"Final MP3 safety ceiling", recommendedCeiling:"-2.0 dBFS (recommended)", silenceThreshold:"Empty-track threshold", onlyDigital:"-90 dBFS (only digital silence)", recommendedThreshold:"-40 dBFS (recommended)", notice:"Cleans NaN/Infinity, measures true peaks, then verifies the MP3. Float audio above 0 dBFS is safely reduced.", zip:"Also create a ZIP share package", start:"▶ Start export", processing:"Processing…", running:"Running", done:"Done", error:"Error", openFinder:"▣ Open in Finder", ready:"Ready: FFmpeg is available.", missingFfmpeg:"FFmpeg is not ready.", unable:"Unable to check dependencies: ", installConfirm:"This will use Homebrew to install missing local dependencies. Continue?", uninstallConfirm:"Only dependencies installed and recorded by this app will be removed. Continue?", output:"Output folder: ", zipOutput:"Share ZIP: ", selectionCancelled:"No folder was selected." },
+  zh: { pageTitle:"多轨 WAV 批量导出", appName:"多轨 WAV 批量导出", language:"语言", lede:"将多个 32-bit float WAV 安全批量导出为便于分享的 MP3。", dependencies:"运行依赖", checking:"正在检查 FFmpeg…", install:"↓ 安装 / 修复依赖", uninstall:"卸载本工具安装的依赖", exportSettings:"导出设置", sourceFolder:"歌曲文件夹", choose:"选择…", sourceHelp:"读取此文件夹中的 WAV；输出至 <code>normalized_mp3</code>。", levelProcessing:"音量处理", perTrack:"每轨标准化", perTrackHelp:"适合 pre-fader 原始录音。每条轨道独立调整，导入后重新混音。", preserve:"保持相对响度", preserveHelp:"整组轨道使用同一增益，保留原有轨间平衡。", convert:"尽量保持原音量，仅安全降幅", convertHelp:"仅当编码后超过安全上限时，才降低该轨并重编码。", bitrate:"MP3 比特率", recommendedBitrate:"256 kbps（推荐）", sampleRate:"采样率", keepOriginal:"保持原始（推荐）", safePeak:"最终 MP3 安全峰值", recommendedCeiling:"-2.0 dBFS（推荐）", silenceThreshold:"无输入/底噪阈值", onlyDigital:"-90 dBFS（仅数字静音）", recommendedThreshold:"-40 dBFS（推荐）", notice:"清洗 NaN / Infinity、测量实际峰值，并复检生成的 MP3。高于 0 dBFS 的浮点信号会安全降低。", zip:"同时创建 ZIP 分享包", start:"▶ 开始转换", processing:"正在处理…", running:"运行中", done:"完成", error:"出错", openFinder:"▣ 在 Finder 中打开", ready:"已就绪：FFmpeg 可用。", missingFfmpeg:"FFmpeg 未就绪。", unable:"无法检查依赖：", installConfirm:"将通过 Homebrew 安装缺少的本地依赖。继续？", uninstallConfirm:"只会卸载本工具曾安装并记录的依赖。继续？", output:"输出文件夹：", zipOutput:"分享 ZIP：", selectionCancelled:"未选择文件夹。" }
 };
-Object.assign(translations.en, { trimTitle:"Preview & trim", trimHelp:"Optional: loading waveforms enables shared trimming and individual track selection. Without it, all tracks convert normally.", loadWaveforms:"Load waveforms", trimStart:"Start (seconds)", trimEnd:"End (seconds)", individualTrim:"Use individual trim times for each track", autoDeselectSilent:"Automatically deselect silent tracks", autoDeselectSilentHelp:"Uses the empty-track threshold below. This option is off by default.", trackStart:"Start", trackEnd:"End", loadingWaveforms:"Generating waveform previews…", waveformsReady:"Waveforms ready. Drag the sliders or enter precise times.", chooseSourceFirst:"Choose a source folder first.", selectAll:"Select all", selectNone:"Select none" });
-Object.assign(translations.zh, { trimTitle:"波形预览与裁剪", trimHelp:"可选步骤：加载波形后才可统一裁剪并逐轨选择；不加载也会正常转换全部轨道。", loadWaveforms:"加载波形", trimStart:"开始时间（秒）", trimEnd:"结束时间（秒）", individualTrim:"对每条轨道使用各自的裁剪时间", autoDeselectSilent:"自动取消选择静音轨道", autoDeselectSilentHelp:"使用下方的无输入/底噪阈值；默认关闭。", trackStart:"开始", trackEnd:"结束", loadingWaveforms:"正在生成波形预览…", waveformsReady:"波形已就绪。拖动滑块或输入精确时间。", chooseSourceFirst:"请先选择歌曲文件夹。", selectAll:"全选", selectNone:"全不选" });
+Object.assign(translations.en, { trimTitle:"Waveforms & trim", trimHelp:"Optional. Load waveforms to trim or choose tracks.", loadWaveforms:"〰️ Load waveforms", trimStart:"Start (seconds)", trimEnd:"End (seconds)", individualTrim:"Individual trim", autoDeselectSilent:"🔊 Select audible tracks only", autoDeselectSilentHelp:"Uses the threshold below. Off by default.", trackStart:"Start", trackEnd:"End", loadingWaveforms:"Generating waveforms…", waveformsReady:"Ready. Drag sliders or enter times.", chooseSourceFirst:"Choose a source folder first.", selectAll:"✓ Select all", selectNone:"✕ Select none" });
+Object.assign(translations.zh, { trimTitle:"波形与裁剪", trimHelp:"可选：加载波形后可裁剪或选择轨道。", loadWaveforms:"〰️ 加载波形", trimStart:"开始时间（秒）", trimEnd:"结束时间（秒）", individualTrim:"逐轨裁剪", autoDeselectSilent:"🔊 只选择有声轨道", autoDeselectSilentHelp:"按下方阈值判断；默认关闭。", trackStart:"开始", trackEnd:"结束", loadingWaveforms:"正在生成波形…", waveformsReady:"已就绪。拖动滑块或输入时间。", chooseSourceFirst:"请先选择歌曲文件夹。", selectAll:"✓ 全选", selectNone:"✕ 全不选" });
 Object.assign(translations.en, { speedMode:"Processing speed", speedConservative:"Conservative — 1 track at a time", speedBalanced:"Balanced — 2 tracks at a time (recommended)", speedFast:"Fast — 4 tracks at a time", speedHelp:"More tracks can finish one song sooner, but use more CPU and disk. This does not combine separate web jobs." });
 Object.assign(translations.zh, { speedMode:"处理速度", speedConservative:"保守 — 一次处理 1 条轨道", speedBalanced:"平衡 — 一次处理 2 条轨道（推荐）", speedFast:"快速 — 一次处理 4 条轨道", speedHelp:"更高并发可让同一首歌更快完成，但会占用更多 CPU 和磁盘；不会合并不同网页任务。" });
 let language = localStorage.getItem("language") || (navigator.language.startsWith("zh") ? "zh" : "en");
@@ -91,25 +91,34 @@ function syncIndividualTrim(row) {
   row.querySelector(".track-trim-start-range").value = start;
   row.querySelector(".track-trim-end-range").value = end;
   const fill = row.querySelector(".track-range-fill");
-  fill.style.left = `${start / duration * 100}%`;
-  fill.style.width = `${(end - start) / duration * 100}%`;
-  syncIndividualOverlay(row, start, end);
+  syncIndividualOverlay(row, start, end, fill);
 }
 
-function syncIndividualOverlay(row, start, end) {
+function syncIndividualOverlay(row, start, end, fill = row.querySelector(".track-range-fill")) {
   const duration = Number(row.dataset.duration);
   const overlay = row.querySelector(".trim-range-overlay");
-  const sliderBounds = row.querySelector(".track-range-controls").getBoundingClientRect();
   const rowBounds = row.getBoundingClientRect();
   const waveform = row.querySelector(".wave-image");
+  const waveformBounds = waveform.getBoundingClientRect();
+  const trackBounds = row.querySelector(".track-range-controls").getBoundingClientRect();
   overlay.style.top = `${waveform.offsetTop}px`;
-  if (!sliderBounds.width || !rowBounds.width) {
+  if (!waveformBounds.width || !rowBounds.width) {
     overlay.style.left = `${start / duration * 100}%`;
     overlay.style.right = `${Math.max(0, 100 - end / duration * 100)}%`;
+    fill.style.left = `${start / duration * 100}%`;
+    fill.style.width = `${(end - start) / duration * 100}%`;
     return;
   }
-  const left = sliderBounds.left - rowBounds.left + start / duration * sliderBounds.width;
-  const right = rowBounds.right - (sliderBounds.left + end / duration * sliderBounds.width);
+  // The waveform image is the source of truth: its borders must always mark
+  // 0% and 100% so the visual trim range accurately covers the audio preview.
+  const waveformStart = waveformBounds.left - rowBounds.left;
+  const left = waveformStart + start / duration * waveformBounds.width;
+  const endPosition = waveformStart + end / duration * waveformBounds.width;
+  const fillStart = waveformBounds.left - trackBounds.left + start / duration * waveformBounds.width;
+  const fillEnd = waveformBounds.left - trackBounds.left + end / duration * waveformBounds.width;
+  const right = rowBounds.width - endPosition;
+  fill.style.left = `${fillStart}px`;
+  fill.style.width = `${Math.max(0, fillEnd - fillStart)}px`;
   overlay.style.left = `${left}px`;
   overlay.style.right = `${Math.max(0, right)}px`;
 }
@@ -163,12 +172,10 @@ function autoDeselectSilentTracks() {
   if (!$("#auto-deselect-silent").checked) return;
   const threshold = Number(document.querySelector("select[name=silenceThreshold]").value);
   waveformTracks.forEach((track) => {
-    if (track.peak === null || track.peak === undefined || Number(track.peak) <= threshold) {
-      const row = document.querySelector(`.wave-track[data-track="${encodeURIComponent(track.name)}"]`);
-      if (!row) return;
-      row.querySelector("input[name=selectedFiles]").checked = false;
-      updateTrackSelectionState(row);
-    }
+    const row = document.querySelector(`.wave-track[data-track="${encodeURIComponent(track.name)}"]`);
+    if (!row) return;
+    row.querySelector("input[name=selectedFiles]").checked = track.peak !== null && track.peak !== undefined && Number(track.peak) > threshold;
+    updateTrackSelectionState(row);
   });
 }
 
@@ -260,6 +267,8 @@ document.querySelector("select[name=silenceThreshold]").addEventListener("change
 $("#waveforms").addEventListener("input", (event) => {
   const row = event.target.closest(".wave-track");
   if (event.target.matches("input[name=selectedFiles]")) {
+    // A manual track choice replaces the automatic audible-only selection.
+    $("#auto-deselect-silent").checked = false;
     updateTrackSelectionState(row);
     return;
   }
@@ -267,8 +276,8 @@ $("#waveforms").addEventListener("input", (event) => {
   if (event.target.matches(".track-trim-end-range")) row.querySelector(".track-trim-end").value = event.target.value;
   if (event.target.matches(".track-trim-start, .track-trim-end, .track-trim-start-range, .track-trim-end-range")) syncIndividualTrim(row);
 });
-$("#select-all").addEventListener("click", () => document.querySelectorAll("input[name=selectedFiles]").forEach((item) => { item.checked = true; updateTrackSelectionState(item.closest(".wave-track")); }));
-$("#select-none").addEventListener("click", () => document.querySelectorAll("input[name=selectedFiles]").forEach((item) => { item.checked = false; updateTrackSelectionState(item.closest(".wave-track")); }));
+$("#select-all").addEventListener("click", () => { $("#auto-deselect-silent").checked = false; document.querySelectorAll("input[name=selectedFiles]").forEach((item) => { item.checked = true; updateTrackSelectionState(item.closest(".wave-track")); }); });
+$("#select-none").addEventListener("click", () => { $("#auto-deselect-silent").checked = false; document.querySelectorAll("input[name=selectedFiles]").forEach((item) => { item.checked = false; updateTrackSelectionState(item.closest(".wave-track")); }); });
 window.addEventListener("resize", () => {
   if (!$("#individual-trim").checked) return;
   document.querySelectorAll(".wave-track").forEach((row) => syncIndividualTrim(row));

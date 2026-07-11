@@ -1,6 +1,6 @@
 # Multitrack WAV Exporter
 
-A macOS-local web app for batch-exporting aligned multitrack 32-bit float WAV recordings as safe, shareable MP3 files. It is designed for rehearsal stems and other recordings that need to be imported into a browser-based DAW or shared with collaborators.
+A macOS-local web app for batch-exporting multitrack 32-bit float WAV recordings as safe, shareable MP3 files.
 
 All processing happens on your Mac. No audio is uploaded anywhere.
 
@@ -10,9 +10,9 @@ All processing happens on your Mac. No audio is uploaded anywhere.
 
 - Batch-process WAV files directly inside a selected folder.
 - Export MP3 at 128–320 kbps and retain or select the output sample rate.
-- Optionally create a ZIP share package containing only the tracks selected for the current export. This choice is remembered locally by the browser.
-- Optionally generate cached waveform previews, trim aligned tracks with one shared dual-handle range, or enable individual trim times for any track; this mode defaults on when durations differ. Individual trim mode disables the shared trim controls, so only one trim method is active at a time.
-- After loading waveforms, optionally deselect tracks at or below the chosen empty-track threshold. It is off by default and uses measured audio peaks, not the waveform appearance.
+- Optional ZIP share package for selected tracks; the browser remembers the choice.
+- Optional waveform preview, track selection, shared trim, and individual trim. Individual trim is enabled by default for differing durations.
+- Optionally select audible tracks only, using the empty-track threshold (off by default).
 - Choose per-track peak normalization, group-relative normalization, or minimal level adjustment.
 - Safely handle 32-bit float WAV files: non-finite samples (NaN / Infinity) are converted to silence before measurement or encoding.
 - Measure the actual cleaned signal peak, including float signals above 0 dBFS, then apply a correct linear gain before MP3 encoding.
@@ -27,7 +27,7 @@ All processing happens on your Mac. No audio is uploaded anywhere.
 1. Double-click `start.command`.
 2. Your default browser opens at <http://127.0.0.1:8765>.
 3. On first use, click **Install / Repair** to install FFmpeg through Homebrew.
-4. Select a folder containing WAV files. Optionally click **Load waveforms**, select the tracks to export (or enable automatic silent-track deselection), and set a shared trim range; differently sized tracks can use individual start/end times.
+4. Select a WAV folder. Optionally load waveforms, select tracks, and trim them together or individually.
 5. Adjust export settings and click **Start export**.
 
 The MP3 files are written to `normalized_mp3` inside the selected source folder. A ZIP share package is enabled by default; if you change it, the browser remembers that choice for next time.
@@ -73,7 +73,7 @@ python3 -m unittest discover -s tests
 
 # 多轨 WAV 批量导出
 
-这是一个仅在 macOS 本机运行的网页工具，用于将同一文件夹中的对齐多轨 32-bit float WAV 批量导出为安全、便于分享的 MP3。适合乐队排练分轨、导入浏览器 DAW 或发送给合作者。
+这是一个仅在 macOS 本机运行的网页工具，用于将同一文件夹中的多轨 32-bit float WAV 批量导出为安全、便于分享的 MP3。适合乐队排练分轨、导入浏览器 DAW 或发送给合作者。
 
 全部音频处理都在本机完成，不会上传任何文件。
 
@@ -84,8 +84,8 @@ python3 -m unittest discover -s tests
 - 批量处理所选文件夹第一层中的 WAV 文件。
 - 支持 128–320 kbps MP3，采样率可保持原始或自行选择。
 - 可选择生成仅包含本次所选轨道的 ZIP 分享包；浏览器会在本机记住此选项。
-- 可选生成缓存波形预览；加载后可选择要导出的轨道，并用同一条双端滑块裁剪对齐轨道；任意轨道均可分别设置开始/结束时间，时长不同时默认开启此模式。逐轨裁剪开启时，全局裁剪控件会禁用，避免两种裁剪方式同时生效。
-- 加载波形后，可按所选的无输入/底噪阈值自动取消选择静音轨道；默认关闭，依据测得的音频峰值而非波形外观判断。
+- 可选加载波形，选择轨道，并统一或逐轨裁剪；时长不同时默认逐轨裁剪。
+- 可按无输入/底噪阈值只选择有声轨道；默认关闭。
 - 支持每轨峰值归一化、整组保持相对音量、或尽量保持原音量三种模式。
 - 专门处理 32-bit float WAV：NaN / Infinity 非有限样本会先变为静音，不会进入测量或编码流程。
 - 测量清洗后的实际峰值；即使浮点信号高于 0 dBFS，也会在 MP3 编码前施加正确的线性增益。
@@ -100,7 +100,7 @@ python3 -m unittest discover -s tests
 1. 双击 `start.command`。
 2. 默认浏览器会打开 <http://127.0.0.1:8765>。
 3. 首次使用时，点击 **安装 / 修复依赖**，工具会通过 Homebrew 安装 FFmpeg。
-4. 选择包含 WAV 的文件夹；如需裁剪或选择部分轨道，可点击 **加载波形**，再设定全局裁剪范围或开启自动取消选择静音轨道；时长不同的轨道可改用各自的开始/结束时间。
+4. 选择 WAV 文件夹；如需裁剪或选择部分轨道，可点击 **加载波形**，再统一或逐轨裁剪。
 5. 调整导出设置后点击 **开始转换**。
 
 MP3 会写入所选源文件夹中的 `normalized_mp3`。ZIP 分享包默认开启；修改后浏览器会在本机记住你的选择。

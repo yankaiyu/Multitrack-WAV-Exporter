@@ -397,6 +397,11 @@ def _convert_job(job_id: str, options: dict) -> None:
 
 
 class Handler(SimpleHTTPRequestHandler):
+    def end_headers(self) -> None:
+        # This is a local development-style app: always serve the newest UI.
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+
     def translate_path(self, path: str) -> str:
         path = urlparse(path).path
         return str(WEB_ROOT / ("index.html" if path == "/" else path.lstrip("/")))

@@ -11,7 +11,7 @@
       <header>
         <div class="topbar"><p class="eyebrow">MACOS · LOCAL ONLY</p><label class="language"><span class="language-icon" aria-hidden="true">🌐</span><span data-i18n="language">Language</span><select id="language-select" aria-label="Language"><option value="en">English</option><option value="zh">中文</option></select></label></div>
         <h1 data-i18n="appName">Multitrack WAV Exporter</h1>
-        <p class="lede" data-i18n="lede">Batch-export aligned 32-bit float WAV files as safe, shareable MP3s.</p>
+        <p class="lede" data-i18n="lede">Batch-export 32-bit float WAV files as safe, shareable MP3s.</p>
       </header>
 
       <section class="card dependencies">
@@ -34,14 +34,14 @@
         </label>
 
         <section class="trim-section">
-          <div class="section-heading"><div><h2 data-i18n="trimTitle">Preview & trim</h2><p data-i18n="trimHelp">Optional: loading waveforms enables shared trimming and individual track selection. Without it, all tracks convert normally.</p></div><div class="preview-actions"><button id="select-all" type="button" class="text-button hidden" data-i18n="selectAll">Select all</button><button id="select-none" type="button" class="text-button hidden" data-i18n="selectNone">Select none</button><button id="load-waveforms" type="button" class="secondary" data-i18n="loadWaveforms">Load waveforms</button></div></div>
+          <div class="section-heading"><div><h2 data-i18n="trimTitle">Waveforms & trim</h2><p data-i18n="trimHelp">Optional. Load waveforms to trim or choose tracks.</p></div><div class="preview-actions"><button id="select-all" type="button" class="text-button hidden" data-i18n="selectAll">✓ Select all</button><button id="select-none" type="button" class="text-button hidden" data-i18n="selectNone">✕ Select none</button><button id="load-waveforms" type="button" class="secondary" data-i18n="loadWaveforms">〰️ Load waveforms</button></div></div>
           <div id="trim-controls" class="trim-controls hidden">
             <label><span data-i18n="trimStart">Start (seconds)</span><input id="trim-start" name="trimStart" type="number" min="0" step="0.001" value="0" /></label>
             <label><span data-i18n="trimEnd">End (seconds)</span><input id="trim-end" name="trimEnd" type="number" min="0" step="0.001" /></label>
             <div class="range-controls"><div class="range-rail"></div><div id="trim-fill" class="range-fill"></div><input id="trim-start-range" type="range" min="0" step="0.001" value="0" /><input id="trim-end-range" type="range" min="0" step="0.001" /></div>
           </div>
-          <label id="individual-trim-option" class="checkbox hidden"><input id="individual-trim" type="checkbox" /> <span data-i18n="individualTrim">Use individual trim times for each differently sized track</span></label>
-          <label id="auto-deselect-silent-option" class="checkbox hidden"><input id="auto-deselect-silent" type="checkbox" /> <span data-i18n="autoDeselectSilent">Automatically deselect silent tracks</span><small data-i18n="autoDeselectSilentHelp">Uses the empty-track threshold below. This option is off by default.</small></label>
+          <label id="individual-trim-option" class="checkbox hidden"><input id="individual-trim" type="checkbox" /> <span data-i18n="individualTrim">Individual trim</span></label>
+          <label id="auto-deselect-silent-option" class="checkbox hidden"><input id="auto-deselect-silent" type="checkbox" /> <span data-i18n="autoDeselectSilent">🔊 Select audible tracks only</span><small data-i18n="autoDeselectSilentHelp">Uses the threshold below. Off by default.</small></label>
           <div id="waveform-status" class="trim-status"></div>
           <div id="waveforms" class="waveforms"></div>
         </section>
