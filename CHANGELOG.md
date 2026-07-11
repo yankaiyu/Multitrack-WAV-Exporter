@@ -6,9 +6,10 @@
 
 - Support for WAV, AIFF, FLAC, MP3, M4A, and AAC input.
 - MP3, M4A (AAC), and selectable 32-bit float, 24-bit PCM, or 16-bit PCM WAV output.
-- Waveform preview, direct waveform-marker dragging for shared and individual trim, track selection, and audible-track selection.
+- Waveform preview, direct waveform-marker dragging for shared and individual trim, single-track trim audition, track selection, and audible-track selection.
 - ZIP share packages, per-job progress, and selectable per-job track concurrency.
 - English and Simplified Chinese interface.
+- Locale files are discovered automatically, so a new complete JSON locale adds a UI language.
 
 ### Safety and behavior
 

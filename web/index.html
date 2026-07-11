@@ -9,7 +9,7 @@
   <body>
     <main>
       <header>
-        <div class="topbar"><p class="eyebrow">MACOS · LOCAL ONLY</p><label class="language"><span class="language-icon" aria-hidden="true">🌐</span><span data-i18n="language">Language</span><select id="language-select" aria-label="Language"><option value="en">English</option><option value="zh">中文</option></select></label></div>
+        <div class="topbar"><p class="eyebrow">MACOS · LOCAL ONLY</p><label class="language"><span class="language-icon" aria-hidden="true">🌐</span><span data-i18n="language">Language</span><select id="language-select"></select></label></div>
         <h1 data-i18n="appName">Multitrack Audio Exporter</h1>
         <p class="lede" data-i18n="lede">Batch-export 32-bit float WAV files as safe, shareable MP3s.</p>
       </header>
@@ -34,7 +34,7 @@
         </label>
 
         <section class="trim-section">
-          <div class="section-heading"><div><h2 data-i18n="trimTitle">Waveforms & trim</h2><p data-i18n="trimHelp">Optional. Load waveforms to trim or choose tracks.</p></div><div class="preview-actions"><button id="select-all" type="button" class="text-button hidden" data-i18n="selectAll">✓ Select all</button><button id="select-none" type="button" class="text-button hidden" data-i18n="selectNone">✕ Select none</button><button id="load-waveforms" type="button" class="secondary" data-i18n="loadWaveforms">〰️ Load waveforms</button></div></div>
+          <div class="section-heading"><div><h2 data-i18n="trimTitle">Waveforms & trim</h2><p data-i18n="trimHelp">Optional. Load waveforms to trim or choose tracks.</p></div><div class="preview-actions"><button id="select-all" type="button" class="text-button hidden" data-i18n="selectAll">✓ Select all</button><button id="select-none" type="button" class="text-button hidden" data-i18n="selectNone">✕ Select none</button><button id="load-waveforms" type="button" class="primary waveform-load-button" data-i18n="loadWaveforms">〰️ Load waveforms</button></div></div>
           <div id="trim-controls" class="trim-controls hidden">
             <label><span data-i18n="trimStart">Start (seconds)</span><input id="trim-start" name="trimStart" type="number" min="0" step="0.001" value="0" /></label>
             <label><span data-i18n="trimEnd">End (seconds)</span><input id="trim-end" name="trimEnd" type="number" min="0" step="0.001" /></label>

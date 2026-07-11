@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import json
 import struct
 import subprocess
 import tempfile
@@ -19,6 +20,21 @@ def write_float_wav(path: Path, values: list[float], sample_rate: int = 48_000) 
     fmt = struct.pack("<HHIIHH", 3, 1, sample_rate, sample_rate * 4, 4, 32)
     path.write_bytes(b"RIFF" + struct.pack("<I", 4 + (8 + len(fmt)) + (8 + len(data))) + b"WAVE"
                      + b"fmt " + struct.pack("<I", len(fmt)) + fmt + b"data" + struct.pack("<I", len(data)) + data)
+
+
+class LocaleTests(unittest.TestCase):
+    def test_locale_files_share_the_same_translation_keys(self) -> None:
+        locales = server.available_locales()
+        self.assertGreaterEqual(len(locales), 2)
+        loaded = {
+            locale["code"]: json.loads((server.LOCALES_ROOT / f"{locale['code']}.json").read_text(encoding="utf-8"))
+            for locale in locales
+        }
+        self.assertIn("en", loaded)
+        self.assertIn("zh", loaded)
+        reference_keys = set(loaded["en"])
+        for code, strings in loaded.items():
+            self.assertEqual(set(strings), reference_keys, f"{code} is missing or has extra translation keys")
 
 
 @unittest.skipUnless(server.tool_path("ffmpeg") and server.tool_path("ffprobe"), "FFmpeg and FFprobe are required")

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import mimetypes
 import os
 import re
 import shutil
@@ -22,11 +23,13 @@ from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "web"
+LOCALES_ROOT = WEB_ROOT / "locales"
 SCRIPTS = ROOT / "scripts"
 JOBS: dict[str, dict] = {}
 JOBS_LOCK = threading.Lock()
 MAC_BIN_DIRS = [Path("/opt/homebrew/bin"), Path("/usr/local/bin")]
 WAVEFORM_FILES: dict[str, Path] = {}
+AUDIO_FILES: dict[str, Path] = {}
 SOURCE_LOCKS: dict[str, threading.Lock] = {}
 SOURCE_LOCKS_LOCK = threading.Lock()
 LAST_CLIENT_ACTIVITY = time.monotonic()
@@ -38,6 +41,10 @@ OUTPUT_FORMATS = {
     "wav": {"extension": ".wav", "codec": None},
 }
 WAV_CODECS = {"float32": "pcm_f32le", "pcm24": "pcm_s24le", "pcm16": "pcm_s16le"}
+AUDIO_CONTENT_TYPES = {
+    ".wav": "audio/wav", ".aif": "audio/aiff", ".aiff": "audio/aiff", ".flac": "audio/flac",
+    ".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".aac": "audio/aac",
+}
 
 
 def tool_path(name: str) -> str | None:
@@ -47,6 +54,21 @@ def tool_path(name: str) -> str | None:
         if item and Path(item).is_file() and os.access(item, os.X_OK):
             return item
     return None
+
+
+def available_locales() -> list[dict[str, str]]:
+    """Discover locale files so adding one JSON file adds one UI language."""
+    locales = []
+    for file in sorted(LOCALES_ROOT.glob("*.json")):
+        try:
+            with file.open(encoding="utf-8") as handle:
+                locale = json.load(handle)
+            name = locale.get("languageName")
+            if isinstance(name, str) and name:
+                locales.append({"code": file.stem, "name": name})
+        except (OSError, json.JSONDecodeError):
+            continue
+    return locales
 
 
 def append_log(job_id: str, line: str) -> None:
@@ -180,16 +202,19 @@ def sanitized_inputs(job_id: str, files: list[Path], workspace: Path,
     return finite, blank
 
 
-def waveform_job(job_id: str, source_text: str) -> None:
+def waveform_job(job_id: str, source_text: str, language: str = "zh") -> None:
     """Generate compact cached waveform PNGs for the trimming UI."""
+    english = language == "en"
+    def text(en: str, zh: str) -> str:
+        return en if english else zh
     try:
         source = Path(source_text).expanduser().resolve()
         files = sorted(p for p in source.iterdir() if p.is_file() and p.suffix.lower() in INPUT_EXTENSIONS)
         ffmpeg, ffprobe = tool_path("ffmpeg"), tool_path("ffprobe")
         if not files:
-            raise ValueError("该文件夹中没有支持的音频文件。")
+            raise ValueError(text("No supported audio files were found in this folder.", "该文件夹中没有支持的音频文件。"))
         if not ffmpeg or not ffprobe:
-            raise ValueError("找不到 FFmpeg / FFprobe，请先安装依赖。")
+            raise ValueError(text("FFmpeg / FFprobe is not available. Install dependencies first.", "找不到 FFmpeg / FFprobe，请先安装依赖。"))
         cache = source / ".multitrack-audio-exporter-preview"
         cache.mkdir(exist_ok=True)
         previews = []
@@ -210,19 +235,22 @@ def waveform_job(job_id: str, source_text: str) -> None:
                 command = [ffmpeg, "-hide_banner", "-y", "-i", str(file), "-filter_complex", filter_graph,
                            "-map", "[wave]", "-frames:v", "1", str(temporary_image)]
                 if run_process(job_id, command) != 0:
-                    raise RuntimeError(f"无法生成波形：{file.name}")
+                    raise RuntimeError(text(f"Could not generate waveform: {file.name}", f"无法生成波形：{file.name}"))
                 os.replace(temporary_image, image)
             token = uuid.uuid4().hex
             WAVEFORM_FILES[token] = image
+            audio_token = uuid.uuid4().hex
+            AUDIO_FILES[audio_token] = file
             # Use the same peak measurement used by export decisions, so the UI can
             # optionally deselect tracks below its empty-track threshold.
-            previews.append({"name": file.name, "duration": duration, "peak": peak_of_audio(file), "image": f"/api/waveform/{token}"})
-            append_log(job_id, f"波形 {index + 1}/{len(files)}：{file.name}\n")
-            set_progress(job_id, round((index + 1) / len(files) * 100), f"生成波形 {index + 1}/{len(files)}")
+            previews.append({"name": file.name, "duration": duration, "peak": peak_of_audio(file),
+                             "image": f"/api/waveform/{token}", "audio": f"/api/audio/{audio_token}"})
+            append_log(job_id, text(f"Waveform {index + 1}/{len(files)}: {file.name}\n", f"波形 {index + 1}/{len(files)}：{file.name}\n"))
+            set_progress(job_id, round((index + 1) / len(files) * 100), text(f"Generating waveforms {index + 1}/{len(files)}", f"生成波形 {index + 1}/{len(files)}"))
         with JOBS_LOCK:
             JOBS[job_id].update(status="done", preview=previews)
     except Exception as error:
-        append_log(job_id, f"\n错误：{error}\n")
+        append_log(job_id, text(f"\nError: {error}\n", f"\n错误：{error}\n"))
         with JOBS_LOCK:
             JOBS[job_id]["status"] = "error"
 
@@ -444,11 +472,60 @@ class Handler(SimpleHTTPRequestHandler):
         length = int(self.headers.get("Content-Length", "0"))
         return json.loads(self.rfile.read(length))
 
+    def stream_audio(self, audio: Path, send_body: bool = True) -> None:
+        """Stream one approved local source file, including browser byte-range seeks."""
+        total = audio.stat().st_size
+        start, end = 0, total - 1
+        status = HTTPStatus.OK
+        range_header = self.headers.get("Range")
+        if range_header:
+            match = re.fullmatch(r"bytes=(\d*)-(\d*)", range_header.strip())
+            if not match:
+                self.send_error(HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                return
+            start_text, end_text = match.groups()
+            if start_text:
+                start = int(start_text)
+                end = int(end_text) if end_text else end
+            elif end_text:
+                start = max(0, total - int(end_text))
+            else:
+                self.send_error(HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                return
+            if start >= total or end < start:
+                self.send_response(HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                self.send_header("Content-Range", f"bytes */{total}")
+                self.end_headers()
+                return
+            end = min(end, total - 1)
+            status = HTTPStatus.PARTIAL_CONTENT
+        content_type = AUDIO_CONTENT_TYPES.get(audio.suffix.lower(), mimetypes.guess_type(str(audio))[0] or "application/octet-stream")
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Accept-Ranges", "bytes")
+        self.send_header("Content-Length", str(end - start + 1))
+        if status == HTTPStatus.PARTIAL_CONTENT:
+            self.send_header("Content-Range", f"bytes {start}-{end}/{total}")
+        self.end_headers()
+        if not send_body:
+            return
+        with audio.open("rb") as source:
+            source.seek(start)
+            remaining = end - start + 1
+            while remaining:
+                chunk = source.read(min(64 * 1024, remaining))
+                if not chunk:
+                    break
+                self.wfile.write(chunk)
+                remaining -= len(chunk)
+
     def do_GET(self) -> None:
         mark_client_activity()
         parsed = urlparse(self.path)
         if parsed.path == "/api/status":
             self.json_response({"ffmpeg": bool(tool_path("ffmpeg"))})
+        elif parsed.path == "/api/locales":
+            self.json_response({"locales": available_locales()})
         elif parsed.path.startswith("/api/job/"):
             with JOBS_LOCK:
                 job = JOBS.get(parsed.path.rsplit("/", 1)[-1])
@@ -464,8 +541,26 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
+        elif parsed.path.startswith("/api/audio/"):
+            audio = AUDIO_FILES.get(parsed.path.rsplit("/", 1)[-1])
+            if not audio or not audio.is_file():
+                self.send_error(404)
+                return
+            self.stream_audio(audio)
         else:
             super().do_GET()
+
+    def do_HEAD(self) -> None:
+        mark_client_activity()
+        parsed = urlparse(self.path)
+        if parsed.path.startswith("/api/audio/"):
+            audio = AUDIO_FILES.get(parsed.path.rsplit("/", 1)[-1])
+            if not audio or not audio.is_file():
+                self.send_error(404)
+                return
+            self.stream_audio(audio, send_body=False)
+            return
+        super().do_HEAD()
 
     def do_POST(self) -> None:
         try:
@@ -483,7 +578,7 @@ class Handler(SimpleHTTPRequestHandler):
                 job_id = uuid.uuid4().hex
                 with JOBS_LOCK:
                     JOBS[job_id] = {"status": "running", "log": "", "output": None, "preview": None, "progress": 0, "progressLabel": "等待开始"}
-                threading.Thread(target=waveform_job, args=(job_id, data["source"]), daemon=True).start()
+                threading.Thread(target=waveform_job, args=(job_id, data["source"], data.get("language", "zh")), daemon=True).start()
                 self.json_response({"job": job_id})
             elif self.path == "/api/dependencies":
                 action = data.get("action")

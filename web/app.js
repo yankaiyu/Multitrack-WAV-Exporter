@@ -1,25 +1,48 @@
 const $ = (selector) => document.querySelector(selector);
 let poller;
-const translations = {
-  en: { pageTitle:"Multitrack Audio Exporter", appName:"Multitrack Audio Exporter", language:"Language", lede:"Batch-export audio tracks as safe, shareable files.", dependencies:"Dependencies", checking:"Checking FFmpeg…", install:"↓ Install / Repair", uninstall:"Uninstall app-managed dependencies", exportSettings:"Export settings", sourceFolder:"Source folder", choose:"Choose…", sourceHelp:"Reads WAV, AIFF, FLAC, MP3, M4A, or AAC files; exports to <code>normalized_audio</code>.", levelProcessing:"Level processing", perTrack:"Normalize each track", perTrackHelp:"Best for pre-fader recordings. Adjust each track independently, then remix after import.", preserve:"Preserve relative levels", preserveHelp:"Apply one gain to the whole group, retaining the original balance.", convert:"Keep levels where safe", convertHelp:"Only lower and re-encode a track if its output exceeds the safety ceiling.", outputFormat:"Output format", formatMp3:"MP3", formatM4a:"M4A (AAC)", formatWav:"WAV", bitrate:"MP3 bitrate", aacBitrate:"AAC bitrate", wavDepth:"WAV bit depth", wavFloat32:"32-bit float (recommended)", wavPcm24:"24-bit PCM", wavPcm16:"16-bit PCM", recommendedBitrate:"256 kbps (recommended)", sampleRate:"Sample rate", keepOriginal:"Keep original (recommended)", safePeak:"Final output safety ceiling", recommendedCeiling:"-2.0 dBFS (recommended)", silenceThreshold:"Empty-track threshold", onlyDigital:"-90 dBFS (only digital silence)", recommendedThreshold:"-40 dBFS (recommended)", notice:"Cleans NaN/Infinity, measures true peaks, then verifies the output. Float audio above 0 dBFS is safely reduced.", zip:"📦 Also create a ZIP share package", start:"▶ Start export", processing:"Processing…", running:"Running", done:"Done", error:"Error", openFinder:"▣ Open in Finder", ready:"Ready: FFmpeg is available.", missingFfmpeg:"FFmpeg is not ready.", unable:"Unable to check dependencies: ", installConfirm:"This will use Homebrew to install missing local dependencies. Continue?", uninstallConfirm:"Only dependencies installed and recorded by this app will be removed. Continue?", output:"Output folder: ", zipOutput:"Share ZIP: ", selectionCancelled:"No folder was selected." },
-  zh: { pageTitle:"多轨音频批量导出", appName:"多轨音频批量导出", language:"语言", lede:"将多条音频轨安全批量导出为便于分享的文件。", dependencies:"运行依赖", checking:"正在检查 FFmpeg…", install:"↓ 安装 / 修复依赖", uninstall:"卸载本工具安装的依赖", exportSettings:"导出设置", sourceFolder:"歌曲文件夹", choose:"选择…", sourceHelp:"读取 WAV、AIFF、FLAC、MP3、M4A 或 AAC；输出至 <code>normalized_audio</code>。", levelProcessing:"音量处理", perTrack:"每轨标准化", perTrackHelp:"适合 pre-fader 原始录音。每条轨道独立调整，导入后重新混音。", preserve:"保持相对响度", preserveHelp:"整组轨道使用同一增益，保留原有轨间平衡。", convert:"尽量保持原音量，仅安全降幅", convertHelp:"仅当输出超过安全上限时，才降低该轨并重编码。", outputFormat:"输出格式", formatMp3:"MP3", formatM4a:"M4A（AAC）", formatWav:"WAV", bitrate:"MP3 比特率", aacBitrate:"AAC 比特率", wavDepth:"WAV 位深", wavFloat32:"32-bit float（推荐）", wavPcm24:"24-bit PCM", wavPcm16:"16-bit PCM", recommendedBitrate:"256 kbps（推荐）", sampleRate:"采样率", keepOriginal:"保持原始（推荐）", safePeak:"最终输出安全峰值", recommendedCeiling:"-2.0 dBFS（推荐）", silenceThreshold:"无输入/底噪阈值", onlyDigital:"-90 dBFS（仅数字静音）", recommendedThreshold:"-40 dBFS（推荐）", notice:"清洗 NaN / Infinity、测量实际峰值，并复检最终输出。高于 0 dBFS 的浮点信号会安全降低。", zip:"📦 同时创建 ZIP 分享包", start:"▶ 开始转换", processing:"正在处理…", running:"运行中", done:"完成", error:"出错", openFinder:"▣ 在 Finder 中打开", ready:"已就绪：FFmpeg 可用。", missingFfmpeg:"FFmpeg 未就绪。", unable:"无法检查依赖：", installConfirm:"将通过 Homebrew 安装缺少的本地依赖。继续？", uninstallConfirm:"只会卸载本工具曾安装并记录的依赖。继续？", output:"输出文件夹：", zipOutput:"分享 ZIP：", selectionCancelled:"未选择文件夹。" }
-};
-Object.assign(translations.en, { trimTitle:"Waveforms & trim", trimHelp:"Optional. Load waveforms to trim or choose tracks.", loadWaveforms:"〰️ Load waveforms", trimStart:"Start (seconds)", trimEnd:"End (seconds)", individualTrim:"✂️ Individual trim", autoDeselectSilent:"🔊 Select audible tracks only", autoDeselectSilentHelp:"Uses the threshold below.", trackStart:"Start", trackEnd:"End", loadingWaveforms:"Generating waveforms…", waveformsReady:"Ready. Drag sliders, waveform markers, or enter times.", chooseSourceFirst:"Choose a source folder first.", selectAll:"✓ Select all", selectNone:"✕ Select none" });
-Object.assign(translations.zh, { trimTitle:"波形与裁剪", trimHelp:"可选：加载波形后可裁剪或选择轨道。", loadWaveforms:"〰️ 加载波形", trimStart:"开始时间（秒）", trimEnd:"结束时间（秒）", individualTrim:"✂️ 逐轨裁剪", autoDeselectSilent:"🔊 只选择有声轨道", autoDeselectSilentHelp:"按下方阈值判断。", trackStart:"开始", trackEnd:"结束", loadingWaveforms:"正在生成波形…", waveformsReady:"已就绪。拖动滑块、波形标记或输入时间。", chooseSourceFirst:"请先选择歌曲文件夹。", selectAll:"✓ 全选", selectNone:"✕ 全不选" });
-Object.assign(translations.en, { speedMode:"Processing speed", speedConservative:"Conservative — 1 track at a time", speedBalanced:"Balanced — 2 tracks at a time (recommended)", speedFast:"Fast — 4 tracks at a time", speedHelp:"More tracks can finish one song sooner, but use more CPU and disk. This does not combine separate web jobs." });
-Object.assign(translations.zh, { speedMode:"处理速度", speedConservative:"保守 — 一次处理 1 条轨道", speedBalanced:"平衡 — 一次处理 2 条轨道（推荐）", speedFast:"快速 — 一次处理 4 条轨道", speedHelp:"更高并发可让同一首歌更快完成，但会占用更多 CPU 和磁盘；不会合并不同网页任务。" });
-let language = localStorage.getItem("language") || (navigator.language.startsWith("zh") ? "zh" : "en");
-const t = (key) => translations[language][key] || key;
+let translations = {};
+let availableLanguages = [];
+let language = "en";
+const t = (key) => translations[key] || key;
 const ZIP_PREFERENCE_KEY = "packageZip";
 
+async function loadLocale(code) {
+  const response = await fetch(`locales/${encodeURIComponent(code)}.json`);
+  if (!response.ok) throw new Error(`Could not load locale: ${code}`);
+  return response.json();
+}
+
+async function changeLanguage(code) {
+  translations = await loadLocale(code);
+  language = code;
+  localStorage.setItem("language", language);
+  applyLanguage();
+}
+
+async function initializeLanguage() {
+  const data = await api("/api/locales");
+  availableLanguages = data.locales;
+  const systemLanguage = navigator.language.split("-")[0];
+  const preferred = localStorage.getItem("language") || systemLanguage;
+  language = availableLanguages.some((item) => item.code === preferred) ? preferred : "en";
+  if (!availableLanguages.some((item) => item.code === language)) language = availableLanguages[0]?.code || "en";
+  const selector = $("#language-select");
+  selector.innerHTML = availableLanguages.map((item) => `<option value="${item.code}">${item.name}</option>`).join("");
+  translations = await loadLocale(language);
+  applyLanguage();
+}
+
 function applyLanguage() {
-  document.documentElement.lang = language === "zh" ? "zh-CN" : "en";
+  document.documentElement.lang = language === "zh" ? "zh-CN" : language;
   document.title = t("pageTitle");
   document.querySelectorAll("[data-i18n]").forEach((node) => { node.textContent = t(node.dataset.i18n); });
   document.querySelectorAll("[data-i18n-html]").forEach((node) => { node.innerHTML = t(node.dataset.i18nHtml); });
   $("#language-select").value = language;
   updateOutputFormat();
-  refreshStatus();
+  document.querySelectorAll(".track-preview-button").forEach((button) => {
+    button.textContent = button.classList.contains("is-playing") ? t("previewPause") : t("previewPlay");
+  });
+  refreshStatus().catch((error) => { $("#dependency-status").textContent = `${t("unable")}${error.message}`; });
 }
 
 async function api(path, options = {}) {
@@ -45,6 +68,7 @@ let waveformDuration = 0;
 let globalMarkerDrag = null;
 
 function resetWaveformState() {
+  document.querySelectorAll(".track-preview-audio").forEach((audio) => audio.pause());
   waveformTracks = [];
   waveformDuration = 0;
   globalMarkerDrag = null;
@@ -90,6 +114,7 @@ function syncTrim(changed = "") {
     overlay.style.left = `${Math.min(100, start / duration * 100)}%`;
     overlay.style.right = `${Math.max(0, 100 - end / duration * 100)}%`;
   });
+  reconcileTrackPreviews();
 }
 
 function setSharedTrimFromMarker(row, marker, clientX) {
@@ -137,6 +162,7 @@ function syncIndividualTrim(row) {
   row.querySelector(".track-trim-end-range").value = end;
   const fill = row.querySelector(".track-range-fill");
   syncIndividualOverlay(row, start, end, fill);
+  reconcileTrackPreviews(row);
 }
 
 function syncIndividualOverlay(row, start, end, fill = row.querySelector(".track-range-fill")) {
@@ -188,6 +214,88 @@ function updateTrackSelectionState(row) {
   row.querySelectorAll(".track-trim-start, .track-trim-end, .track-trim-start-range, .track-trim-end-range").forEach((input) => {
     input.disabled = !selected || !individualTrimEnabled;
   });
+  const preview = row.querySelector(".track-preview-button");
+  if (preview) preview.disabled = !selected;
+  if (!selected) stopTrackPreview(row, true);
+}
+
+function previewBounds(row) {
+  const duration = Number(row.dataset.duration);
+  if ($("#individual-trim").checked) {
+    return {
+      start: Number(row.querySelector(".track-trim-start").value) || 0,
+      end: Number(row.querySelector(".track-trim-end").value) || duration,
+    };
+  }
+  return { start: Number($("#trim-start").value) || 0, end: Math.min(Number($("#trim-end").value) || duration, duration) };
+}
+
+function setPreviewButton(row, playing) {
+  const button = row.querySelector(".track-preview-button");
+  const marker = row.querySelector(".playback-marker");
+  if (!button) return;
+  button.classList.toggle("is-playing", playing);
+  button.textContent = playing ? t("previewPause") : t("previewPlay");
+  marker?.classList.toggle("hidden", !playing);
+}
+
+function updatePlaybackMarker(row) {
+  const audio = row.querySelector(".track-preview-audio");
+  const marker = row.querySelector(".playback-marker");
+  if (!audio || !marker) return;
+  const { start, end } = previewBounds(row);
+  const percent = end > start ? (audio.currentTime - start) / (end - start) * 100 : 0;
+  marker.style.left = `${Math.max(0, Math.min(100, percent))}%`;
+}
+
+function reconcileTrackPreviews(changedRow = null) {
+  document.querySelectorAll(".wave-track").forEach((row) => {
+    if (changedRow && row !== changedRow && $("#individual-trim").checked) return;
+    const audio = row.querySelector(".track-preview-audio");
+    if (!audio || audio.paused) return;
+    const { start, end } = previewBounds(row);
+    // A newly moved trim boundary must never leave an old audio position playing
+    // beyond the highlighted range. Stop at the new start so the next Play is exact.
+    if (audio.currentTime < start || audio.currentTime >= end) stopTrackPreview(row, true);
+    else updatePlaybackMarker(row);
+  });
+}
+
+function stopTrackPreview(row, reset = false) {
+  const audio = row.querySelector(".track-preview-audio");
+  if (!audio) return;
+  audio.pause();
+  if (reset && audio.readyState >= HTMLMediaElement.HAVE_METADATA) audio.currentTime = previewBounds(row).start;
+  setPreviewButton(row, false);
+}
+
+function startTrackPreview(row) {
+  const audio = row.querySelector(".track-preview-audio");
+  if (!audio) return;
+  document.querySelectorAll(".wave-track").forEach((other) => { if (other !== row) stopTrackPreview(other); });
+  const start = previewBounds(row).start;
+  const play = () => {
+    audio.currentTime = start;
+    audio.play().then(() => {
+      setPreviewButton(row, true);
+      updatePlaybackMarker(row);
+    }).catch(() => {
+      setPreviewButton(row, false);
+      alert(t("previewUnavailable"));
+    });
+  };
+  if (audio.readyState >= HTMLMediaElement.HAVE_METADATA) play();
+  else {
+    audio.addEventListener("loadedmetadata", play, { once:true });
+    audio.load();
+  }
+}
+
+function toggleTrackPreview(row) {
+  const audio = row.querySelector(".track-preview-audio");
+  if (!audio) return;
+  if (audio.paused) startTrackPreview(row);
+  else stopTrackPreview(row);
 }
 
 function renderWaveforms(preview) {
@@ -196,7 +304,7 @@ function renderWaveforms(preview) {
   const waves = $("#waveforms");
   waves.innerHTML = preview.map((track) => {
     const trackId = encodeURIComponent(track.name);
-    return `<div class="wave-track" data-track="${trackId}" data-duration="${track.duration}"><label class="wave-name track-select"><input type="checkbox" name="selectedFiles" value="${track.name}" checked />${track.name}</label><div class="track-trim-controls hidden"><label>${t("trackStart")}<input class="track-trim-start" type="number" min="0" max="${track.duration}" step="0.001" value="0" /></label><label>${t("trackEnd")}<input class="track-trim-end" type="number" min="0" max="${track.duration}" step="0.001" value="${track.duration.toFixed(3)}" /></label><div class="track-range-controls"><div class="track-range-rail"></div><div class="track-range-fill"></div><input class="track-trim-start-range" type="range" min="0" max="${track.duration}" step="0.001" value="0" /><input class="track-trim-end-range" type="range" min="0" max="${track.duration}" step="0.001" value="${track.duration}" /></div></div><img class="wave-image" src="${track.image}" alt="${track.name}" /><div class="trim-range-overlay" data-duration="${track.duration}"><span class="trim-marker trim-marker-start" data-marker="start" aria-label="Trim start"></span><span class="trim-marker trim-marker-end" data-marker="end" aria-label="Trim end"></span></div></div>`;
+    return `<div class="wave-track" data-track="${trackId}" data-duration="${track.duration}"><label class="wave-name track-select"><input type="checkbox" name="selectedFiles" value="${track.name}" checked />${track.name}</label><button class="track-preview-button secondary" type="button">${t("previewPlay")}</button><audio class="track-preview-audio" preload="metadata" src="${track.audio}"></audio><div class="track-trim-controls hidden"><label>${t("trackStart")}<input class="track-trim-start" type="number" min="0" max="${track.duration}" step="0.001" value="0" /></label><label>${t("trackEnd")}<input class="track-trim-end" type="number" min="0" max="${track.duration}" step="0.001" value="${track.duration.toFixed(3)}" /></label><div class="track-range-controls"><div class="track-range-rail"></div><div class="track-range-fill"></div><input class="track-trim-start-range" type="range" min="0" max="${track.duration}" step="0.001" value="0" /><input class="track-trim-end-range" type="range" min="0" max="${track.duration}" step="0.001" value="${track.duration}" /></div></div><img class="wave-image" src="${track.image}" alt="${track.name}" /><div class="trim-range-overlay" data-duration="${track.duration}"><span class="playback-marker hidden" aria-hidden="true"></span><span class="trim-marker trim-marker-start" data-marker="start" aria-label="Trim start"></span><span class="trim-marker trim-marker-end" data-marker="end" aria-label="Trim end"></span></div></div>`;
   }).join("");
   ["#trim-start-range", "#trim-end-range"].forEach((selector) => { $(selector).max = waveformDuration; });
   $("#trim-end").max = waveformDuration;
@@ -211,6 +319,15 @@ function renderWaveforms(preview) {
   updateIndividualTrimMode();
   $("#waveform-status").textContent = t("waveformsReady");
   syncTrim();
+  document.querySelectorAll(".track-preview-audio").forEach((audio) => {
+    const row = audio.closest(".wave-track");
+    audio.addEventListener("timeupdate", () => {
+      if (audio.currentTime >= previewBounds(row).end) stopTrackPreview(row, true);
+      else updatePlaybackMarker(row);
+    });
+    audio.addEventListener("ended", () => setPreviewButton(row, false));
+    audio.addEventListener("error", () => setPreviewButton(row, false));
+  });
 }
 
 function autoDeselectSilentTracks() {
@@ -300,7 +417,7 @@ $("#load-waveforms").addEventListener("click", async () => {
   $("#load-waveforms").disabled = true;
   $("#waveform-status").textContent = t("loadingWaveforms");
   $("#waveforms").innerHTML = "";
-  try { pollWaveforms((await api("/api/waveforms", { method:"POST", body:JSON.stringify({source}) })).job); }
+  try { pollWaveforms((await api("/api/waveforms", { method:"POST", body:JSON.stringify({source, language}) })).job); }
   catch (error) { $("#load-waveforms").disabled = false; $("#waveform-status").textContent = error.message; }
 });
 $("#trim-start").addEventListener("input", () => syncTrim("start"));
@@ -321,6 +438,10 @@ $("#waveforms").addEventListener("input", (event) => {
   if (event.target.matches(".track-trim-start-range")) row.querySelector(".track-trim-start").value = event.target.value;
   if (event.target.matches(".track-trim-end-range")) row.querySelector(".track-trim-end").value = event.target.value;
   if (event.target.matches(".track-trim-start, .track-trim-end, .track-trim-start-range, .track-trim-end-range")) syncIndividualTrim(row);
+});
+$("#waveforms").addEventListener("click", (event) => {
+  const button = event.target.closest(".track-preview-button");
+  if (button) toggleTrackPreview(button.closest(".wave-track"));
 });
 function beginSharedMarkerDrag(event) {
   const marker = event.target.closest(".trim-marker");
@@ -363,7 +484,10 @@ $("#uninstall-button").addEventListener("click", async () => {
   catch (error) { alert(error.message); }
 });
 
-$("#language-select").addEventListener("change", (event) => { language = event.target.value; localStorage.setItem("language", language); applyLanguage(); });
+$("#language-select").addEventListener("change", async (event) => {
+  try { await changeLanguage(event.target.value); }
+  catch (error) { alert(error.message); event.target.value = language; }
+});
 
 // This is a browser-local preference: it is restored for later exports, but
 // does not affect any files or settings outside this app.
@@ -371,8 +495,10 @@ const zipCheckbox = document.querySelector("input[name=packageZip]");
 const savedZipPreference = localStorage.getItem(ZIP_PREFERENCE_KEY);
 if (savedZipPreference !== null) zipCheckbox.checked = savedZipPreference === "true";
 zipCheckbox.addEventListener("change", () => localStorage.setItem(ZIP_PREFERENCE_KEY, String(zipCheckbox.checked)));
-applyLanguage();
-sendHeartbeat();
-const heartbeatTimer = setInterval(sendHeartbeat, 5000);
-window.addEventListener("pagehide", () => clearInterval(heartbeatTimer));
-refreshStatus().catch((error) => { $("#dependency-status").textContent = `${t("unable")}${error.message}`; });
+initializeLanguage().then(() => {
+  sendHeartbeat();
+  const heartbeatTimer = setInterval(sendHeartbeat, 5000);
+  window.addEventListener("pagehide", () => clearInterval(heartbeatTimer));
+}).catch((error) => {
+  $("#dependency-status").textContent = `Unable to load interface language: ${error.message}`;
+});

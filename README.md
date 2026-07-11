@@ -4,12 +4,14 @@ A macOS-local app for batch-exporting multitrack recordings as safe, shareable f
 
 > macOS only. The interface is available in English and Simplified Chinese.
 
+To add a UI language, add a complete `web/locales/<code>.json` file; the app discovers it automatically.
+
 ## Highlights
 
 - <strong>32-bit float WAV input</strong> with safe handling of signals above 0 dBFS.
 - <strong>Input:</strong> WAV, AIFF, FLAC, MP3, M4A, and AAC.
 - <strong>Output:</strong> MP3, M4A (AAC), or WAV at 32-bit float, 24-bit PCM, or 16-bit PCM.
-- <strong>Flexible preparation:</strong> waveform preview, track selection, shared or individual trim, and three level-processing modes.
+- <strong>Flexible preparation:</strong> waveform preview, single-track trim audition, track selection, shared or individual trim, and three level-processing modes.
 - <strong>Easy sharing:</strong> optional ZIP package and a local-only workflow.
 
 ## Interface preview
@@ -52,12 +54,14 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed behavior and release notes.
 
 > 仅支持 macOS；界面提供英文和简体中文。
 
+如需新增界面语言，只需添加完整的 `web/locales/<语言代码>.json` 文件；程序会自动发现。
+
 ## 主要功能
 
 - <strong>重点支持 32-bit float WAV 输入</strong>，可安全处理高于 0 dBFS 的信号。
 - <strong>输入：</strong> WAV、AIFF、FLAC、MP3、M4A、AAC。
 - <strong>输出：</strong> MP3、M4A（AAC），或 32-bit float、24-bit PCM、16-bit PCM WAV。
-- <strong>灵活准备：</strong> 波形预览、轨道选择、统一或逐轨裁剪，以及三种音量处理模式。
+- <strong>灵活准备：</strong> 波形预览、单轨裁剪试听、轨道选择、统一或逐轨裁剪，以及三种音量处理模式。
 - <strong>方便分享：</strong> 可选 ZIP 分享包，全部本机处理。
 
 ## 快速开始
