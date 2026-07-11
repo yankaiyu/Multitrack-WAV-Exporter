@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import math
-import json
 import struct
 import subprocess
 import tempfile
@@ -26,10 +25,7 @@ class LocaleTests(unittest.TestCase):
     def test_locale_files_share_the_same_translation_keys(self) -> None:
         locales = server.available_locales()
         self.assertGreaterEqual(len(locales), 2)
-        loaded = {
-            locale["code"]: json.loads((server.LOCALES_ROOT / f"{locale['code']}.json").read_text(encoding="utf-8"))
-            for locale in locales
-        }
+        loaded = {locale["code"]: server.load_locale(locale["code"]) for locale in locales}
         self.assertIn("en", loaded)
         self.assertIn("zh", loaded)
         reference_keys = set(loaded["en"])

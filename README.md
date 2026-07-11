@@ -2,7 +2,7 @@
 
 A macOS-local app for batch-exporting multitrack recordings as safe, shareable files. All processing stays on your Mac.
 
-> macOS only. The interface is available in English and Simplified Chinese.
+> macOS only. The interface includes English, Chinese, Japanese, Spanish, French, and Korean.
 
 To add a UI language, add a complete `web/locales/<code>.json` file; the app discovers it automatically.
 
@@ -52,7 +52,7 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed behavior and release notes.
 
 这是一个仅在 macOS 本机运行的多轨音频批量导出工具，可生成安全、便于分享的文件。全部处理都在你的 Mac 上完成。
 
-> 仅支持 macOS；界面提供英文和简体中文。
+> 仅支持 macOS；界面提供简体中文、繁体中文、英文、日文、西班牙语、法语和韩文。
 
 如需新增界面语言，只需添加完整的 `web/locales/<语言代码>.json` 文件；程序会自动发现。
 

@@ -57,13 +57,25 @@ def localized(language: str | None, key: str, **values: object) -> str:
     """Format a user-facing server message from the same locale files as the UI."""
     code = language or "en"
     if code not in LOCALE_CACHE:
-        try:
-            with (LOCALES_ROOT / f"{code}.json").open(encoding="utf-8") as handle:
-                LOCALE_CACHE[code] = json.load(handle)
-        except (OSError, json.JSONDecodeError):
-            LOCALE_CACHE[code] = {}
+        LOCALE_CACHE[code] = load_locale(code)
     template = LOCALE_CACHE[code].get(key) or LOCALE_CACHE.get("en", {}).get(key) or key
     return template.format_map(defaultdict(str, values))
+
+
+def load_locale(code: str, seen: set[str] | None = None) -> dict[str, str]:
+    """Load a locale and recursively merge its optional base locale."""
+    seen = seen or set()
+    if code in seen:
+        return {}
+    seen.add(code)
+    try:
+        with (LOCALES_ROOT / f"{code}.json").open(encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    merged = load_locale(data["base"], seen) if data.get("base") else {}
+    merged.update(data.get("overrides", data))
+    return merged
 
 
 def job_language(job_id: str) -> str:

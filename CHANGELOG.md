@@ -8,7 +8,7 @@
 - MP3, M4A (AAC), and selectable 32-bit float, 24-bit PCM, or 16-bit PCM WAV output.
 - Waveform preview, direct waveform-marker dragging for shared and individual trim, single-track trim audition, track selection, and audible-track selection.
 - ZIP share packages, per-job progress, and selectable per-job track concurrency.
-- English and Simplified Chinese interface.
+- English, Simplified Chinese, Traditional Chinese, Japanese, Spanish, French, and Korean interface.
 - Locale files are discovered automatically, so a new complete JSON locale adds a UI language.
 
 ### Safety and behavior
@@ -30,7 +30,7 @@
 - 支持 MP3、M4A（AAC）输出，以及可选 32-bit float、24-bit PCM、16-bit PCM WAV 输出。
 - 支持波形预览、直接拖动波形标记进行裁剪、轨道选择和只选择有声轨道。
 - 支持 ZIP 分享包、任务进度和单任务内轨道并发设置。
-- 提供英文与简体中文界面。
+- 提供英文、简体中文、繁体中文、日文、西班牙语、法语与韩文界面。
 
 ### 安全与行为
 
