@@ -14,9 +14,9 @@ A macOS-local app for batch-exporting multitrack recordings as safe, shareable f
 
 ## Interface preview
 
-![Export settings — synthetic demo data](docs/screenshots/export-settings.jpg)
-
 ![Waveform preview and individual trim — synthetic demo data](docs/screenshots/waveform-trim.jpg)
+
+![Export settings — synthetic demo data](docs/screenshots/export-settings.jpg)
 
 ## Quick start
 
