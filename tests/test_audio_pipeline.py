@@ -36,6 +36,11 @@ class LocaleTests(unittest.TestCase):
         for code, strings in loaded.items():
             self.assertEqual(set(strings), reference_keys, f"{code} is missing or has extra translation keys")
 
+    def test_server_messages_come_from_the_selected_locale(self) -> None:
+        self.assertEqual(server.localized("en", "waitingToStart"), "Waiting to start")
+        self.assertEqual(server.localized("zh", "waitingToStart"), "等待开始")
+        self.assertIn("FFmpeg", server.localized("en", "missingFfmpeg"))
+
 
 @unittest.skipUnless(server.tool_path("ffmpeg") and server.tool_path("ffprobe"), "FFmpeg and FFprobe are required")
 class FloatAudioPipelineTests(unittest.TestCase):

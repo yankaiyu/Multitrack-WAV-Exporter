@@ -1,66 +1,12 @@
-const $ = (selector) => document.querySelector(selector);
-let poller;
-let translations = {};
-let availableLanguages = [];
-let language = "en";
-const t = (key) => translations[key] || key;
+import { $, api } from "./core.js";
+import { changeLanguage, currentLanguage, initializeLanguage, t } from "./i18n.js";
+import { refreshStatus, watch } from "./jobs.js";
+
 const ZIP_PREFERENCE_KEY = "packageZip";
-
-async function loadLocale(code) {
-  const response = await fetch(`locales/${encodeURIComponent(code)}.json`);
-  if (!response.ok) throw new Error(`Could not load locale: ${code}`);
-  return response.json();
-}
-
-async function changeLanguage(code) {
-  translations = await loadLocale(code);
-  language = code;
-  localStorage.setItem("language", language);
-  applyLanguage();
-}
-
-async function initializeLanguage() {
-  const data = await api("/api/locales");
-  availableLanguages = data.locales;
-  const systemLanguage = navigator.language.split("-")[0];
-  const preferred = localStorage.getItem("language") || systemLanguage;
-  language = availableLanguages.some((item) => item.code === preferred) ? preferred : "en";
-  if (!availableLanguages.some((item) => item.code === language)) language = availableLanguages[0]?.code || "en";
-  const selector = $("#language-select");
-  selector.innerHTML = availableLanguages.map((item) => `<option value="${item.code}">${item.name}</option>`).join("");
-  translations = await loadLocale(language);
-  applyLanguage();
-}
-
-function applyLanguage() {
-  document.documentElement.lang = language === "zh" ? "zh-CN" : language;
-  document.title = t("pageTitle");
-  document.querySelectorAll("[data-i18n]").forEach((node) => { node.textContent = t(node.dataset.i18n); });
-  document.querySelectorAll("[data-i18n-html]").forEach((node) => { node.innerHTML = t(node.dataset.i18nHtml); });
-  $("#language-select").value = language;
-  updateOutputFormat();
-  document.querySelectorAll(".track-preview-button").forEach((button) => {
-    button.textContent = button.classList.contains("is-playing") ? t("previewPause") : t("previewPlay");
-  });
-  refreshStatus().catch((error) => { $("#dependency-status").textContent = `${t("unable")}${error.message}`; });
-}
-
-async function api(path, options = {}) {
-  const response = await fetch(path, { headers: { "Content-Type": "application/json" }, ...options });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error || "请求失败");
-  return data;
-}
+let selectingFolder = false;
 
 function sendHeartbeat() {
   api("/api/heartbeat", { method:"POST", body:"{}" }).catch(() => {});
-}
-
-async function refreshStatus() {
-  const status = await api("/api/status");
-  const ready = status.ffmpeg;
-  $("#dependency-status").textContent = ready ? t("ready") : t("missingFfmpeg");
-  $("#convert-button").disabled = !ready;
 }
 
 let waveformTracks = [];
@@ -354,43 +300,12 @@ function pollWaveforms(job) {
   }, 500);
 }
 
-function watch(job) {
-  clearInterval(poller);
-  $("#job-panel").classList.remove("hidden");
-  $("#job-title").textContent = t("processing");
-  $("#job-state").textContent = t("running");
-  $("#job-progress-bar").style.width = "0%";
-  $("#job-progress-text").textContent = "0%";
-  $("#job-log").textContent = "";
-  $("#output-path").textContent = "";
-  $("#open-output").classList.add("hidden");
-  poller = setInterval(async () => {
-    const data = await api(`/api/job/${job}`);
-    $("#job-log").textContent = data.log || "";
-    $("#job-log").scrollTop = $("#job-log").scrollHeight;
-    // Static files can refresh while an older local Python server is still running.
-    // Treat a completed legacy job as 100% instead of misleadingly showing 0%.
-    const progress = data.status === "done" ? 100 : Number(data.progress || 0);
-    $("#job-progress-bar").style.width = `${progress}%`;
-    $("#job-progress-text").textContent = data.progressLabel ? `${progress}% · ${data.progressLabel}` : `${progress}%`;
-    if (data.status !== "running") {
-      clearInterval(poller);
-      const success = data.status === "done";
-      $("#job-title").textContent = success ? t("done") : t("error");
-      $("#job-state").textContent = success ? t("done") : t("error");
-      $("#output-path").textContent = data.output ? `${t("output")}${data.output}${data.zip ? `\n${t("zipOutput")}${data.zip}` : ""}` : "";
-      if (data.output && success) { $("#open-output").classList.remove("hidden"); $("#open-output").dataset.path = data.output; }
-      $("#convert-button").disabled = false;
-      refreshStatus();
-    }
-  }, 700);
-}
-
 $("#convert-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   $("#convert-button").disabled = true;
   const form = new FormData(event.currentTarget);
   const payload = Object.fromEntries(form);
+  payload.language = currentLanguage();
   const selectionControls = document.querySelectorAll("input[name=selectedFiles]");
   if (selectionControls.length) payload.selectedFiles = [...selectionControls].filter((item) => item.checked).map((item) => item.value);
   if ($("#individual-trim").checked) {
@@ -405,9 +320,26 @@ $("#convert-form").addEventListener("submit", async (event) => {
   } catch (error) { alert(error.message); $("#convert-button").disabled = false; }
 });
 
-$("#choose-folder").addEventListener("click", async () => {
-  try { const result = await api("/api/select-folder", { method:"POST", body:JSON.stringify({language}) }); if (result.path) { resetWaveformState(); $("#source").value = result.path.replace(/\/$/, ""); } else alert(`${t("selectionCancelled")}${result.error ? `\n${result.error}` : ""}`); }
-  catch (error) { alert(error.message); }
+$("#choose-folder").addEventListener("click", async (event) => {
+  if (selectingFolder) return;
+  selectingFolder = true;
+  const button = event.currentTarget;
+  button.disabled = true;
+  button.textContent = t("choosingFolder");
+  try {
+    const result = await api("/api/select-folder", { method:"POST", body:JSON.stringify({language:currentLanguage()}) });
+    if (result.path) {
+      resetWaveformState();
+      $("#source").value = result.path.replace(/\/$/, "");
+    }
+    // Cancelling the native picker is intentional and needs no alert.
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    selectingFolder = false;
+    button.disabled = false;
+    button.textContent = t("choose");
+  }
 });
 $("#source").addEventListener("input", resetWaveformState);
 $("#output-format").addEventListener("change", updateOutputFormat);
@@ -417,7 +349,7 @@ $("#load-waveforms").addEventListener("click", async () => {
   $("#load-waveforms").disabled = true;
   $("#waveform-status").textContent = t("loadingWaveforms");
   $("#waveforms").innerHTML = "";
-  try { pollWaveforms((await api("/api/waveforms", { method:"POST", body:JSON.stringify({source, language}) })).job); }
+  try { pollWaveforms((await api("/api/waveforms", { method:"POST", body:JSON.stringify({source, language:currentLanguage()}) })).job); }
   catch (error) { $("#load-waveforms").disabled = false; $("#waveform-status").textContent = error.message; }
 });
 $("#trim-start").addEventListener("input", () => syncTrim("start"));
@@ -469,24 +401,28 @@ window.addEventListener("resize", () => {
   document.querySelectorAll(".wave-track").forEach((row) => syncIndividualTrim(row));
 });
 $("#open-output").addEventListener("click", async (event) => {
-  try { await api("/api/open-folder", { method:"POST", body:JSON.stringify({path:event.currentTarget.dataset.path}) }); }
+  try { await api("/api/open-folder", { method:"POST", body:JSON.stringify({path:event.currentTarget.dataset.path, language:currentLanguage()}) }); }
   catch (error) { alert(error.message); }
 });
 
 $("#install-button").addEventListener("click", async () => {
   if (!confirm(t("installConfirm"))) return;
-  try { watch((await api("/api/dependencies", { method:"POST", body:JSON.stringify({action:"install"}) })).job); }
+  try { watch((await api("/api/dependencies", { method:"POST", body:JSON.stringify({action:"install", language:currentLanguage()}) })).job); }
   catch (error) { alert(error.message); }
 });
 $("#uninstall-button").addEventListener("click", async () => {
   if (!confirm(t("uninstallConfirm"))) return;
-  try { watch((await api("/api/dependencies", { method:"POST", body:JSON.stringify({action:"uninstall"}) })).job); }
+  try { watch((await api("/api/dependencies", { method:"POST", body:JSON.stringify({action:"uninstall", language:currentLanguage()}) })).job); }
   catch (error) { alert(error.message); }
 });
 
 $("#language-select").addEventListener("change", async (event) => {
   try { await changeLanguage(event.target.value); }
-  catch (error) { alert(error.message); event.target.value = language; }
+  catch (error) { alert(error.message); event.target.value = currentLanguage(); }
+});
+document.addEventListener("languagechange", () => {
+  updateOutputFormat();
+  refreshStatus().catch((error) => { $("#dependency-status").textContent = `${t("unable")}${error.message}`; });
 });
 
 // This is a browser-local preference: it is restored for later exports, but
