@@ -29,7 +29,7 @@
         <h2 data-i18n="exportSettings">Export settings</h2>
         <label class="path-field">
           <span data-i18n="sourceFolder">Source folder</span>
-          <div class="source-row"><input id="source" name="source" type="text" placeholder="/Users/you/Music/Practice/2026-07-09" required /><button id="choose-folder" type="button" class="secondary" data-i18n="choose">Choose…</button></div>
+          <div class="source-row"><input id="source" name="source" type="text" placeholder="/Users/YourName/Music/Audio Tracks" required /><button id="choose-folder" type="button" class="secondary" data-i18n="choose">Choose…</button></div>
           <small data-i18n-html="sourceHelp">Reads supported audio files in this folder; exports to <code>normalized_audio</code>.</small>
         </label>
 
@@ -110,7 +110,7 @@
           </label>
         </div>
         <p class="notice" data-i18n="notice">Every mode checks decoded MP3 peaks. When a peak exceeds the ceiling, it re-encodes from the original WAV at a lower level to avoid clipping.</p>
-        <label class="checkbox"><input type="checkbox" name="packageZip" checked /> <span data-i18n="zip">Also create a ZIP share package (AirDrop, cloud drive, or bandmates)</span></label>
+        <label id="package-zip-option" class="checkbox"><input type="checkbox" name="packageZip" checked /> <span data-i18n="zip">📦 Also create a ZIP share package</span></label>
         <button id="convert-button" class="primary" type="submit" data-i18n="start">Start export</button>
       </form>
 
