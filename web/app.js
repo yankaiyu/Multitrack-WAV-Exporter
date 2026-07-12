@@ -4,6 +4,9 @@ import { refreshStatus, watch } from "./jobs.js";
 
 const ZIP_PREFERENCE_KEY = "packageZip";
 const SPLIT_STEREO_PREFERENCE_KEY = "splitStereo";
+const PREVIEW_LIMITER_PREFERENCE_KEY = "previewLimiter";
+const PREVIEW_VOLUME_MIN = -60;
+const PREVIEW_VOLUME_MAX = 12;
 let selectingFolder = false;
 
 let waveformTracks = [];
@@ -11,6 +14,41 @@ let waveformDuration = 0;
 let globalMarkerDrag = null;
 let playbackDrag = null;
 let lastPreviewRow = null;
+let previewAudioContext = null;
+const previewAudioGraphs = new WeakMap();
+
+function previewGraph(audio) {
+  if (previewAudioGraphs.has(audio)) return previewAudioGraphs.get(audio);
+  try {
+    previewAudioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+    const source = previewAudioContext.createMediaElementSource(audio);
+    const gain = previewAudioContext.createGain();
+    const limiter = previewAudioContext.createDynamicsCompressor();
+    limiter.threshold.value = -1;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.001;
+    limiter.release.value = 0.08;
+    source.connect(gain).connect(limiter).connect(previewAudioContext.destination);
+    const graph = { gain, limiter };
+    previewAudioGraphs.set(audio, graph);
+    return graph;
+  } catch (_) {
+    return null;
+  }
+}
+
+function applyPreviewAudioSettings(row) {
+  const audio = row.querySelector(".track-preview-audio");
+  const graph = audio && previewGraph(audio);
+  if (!graph) return;
+  const volume = Number(row.querySelector(".track-preview-volume input[type=range]")?.value) || 0;
+  graph.gain.gain.value = Math.pow(10, volume / 20);
+  const enabled = $("#preview-limiter")?.checked ?? true;
+  graph.limiter.threshold.value = enabled ? -1 : 0;
+  graph.limiter.ratio.value = enabled ? 20 : 1;
+  graph.limiter.knee.value = enabled ? 0 : 30;
+}
 
 function resetWaveformState() {
   document.querySelectorAll(".track-preview-audio").forEach((audio) => audio.pause());
@@ -20,8 +58,10 @@ function resetWaveformState() {
   playbackDrag = null;
   lastPreviewRow = null;
   $("#waveforms").innerHTML = "";
+  $("#preview-volume-heading").classList.add("hidden");
   $("#waveform-status").textContent = "";
   $("#trim-controls").classList.add("hidden");
+  $("#trim-controls").classList.remove("has-preview-volume");
   $("#individual-trim-option").classList.add("hidden");
   $("#individual-trim").checked = false;
   $("#auto-deselect-silent-option").classList.add("hidden");
@@ -57,16 +97,24 @@ function syncTrim(changed = "") {
   $("#trim-end-range").value = end;
   $("#trim-fill").style.left = `${start / waveformDuration * 100}%`;
   $("#trim-fill").style.width = `${(end - start) / waveformDuration * 100}%`;
-  document.querySelectorAll(".wave-track:not(.individual-trim-active) .trim-range-overlay").forEach((overlay) => {
-    // Individual trim positions this overlay with inline pixels. Clear that
-    // value when returning to shared trim so the shared marker is visible.
-    overlay.style.top = "";
-    overlay.style.bottom = "";
-    const duration = Number(overlay.dataset.duration) || waveformDuration;
-    overlay.style.left = `${Math.min(100, start / duration * 100)}%`;
-    overlay.style.right = `${Math.max(0, 100 - end / duration * 100)}%`;
-  });
+  document.querySelectorAll(".wave-track:not(.individual-trim-active)").forEach((row) => syncSharedOverlay(row, start, end));
   reconcileTrackPreviews();
+}
+
+function syncSharedOverlay(row, start, end) {
+  const overlay = row.querySelector(".trim-range-overlay");
+  const waveform = row.querySelector(".wave-image");
+  if (!overlay || !waveform) return;
+  const rowBounds = row.getBoundingClientRect();
+  const waveformBounds = waveform.getBoundingClientRect();
+  const duration = Number(row.dataset.duration) || waveformDuration;
+  if (!duration || !waveformBounds.width || !rowBounds.width) return;
+  const left = waveformBounds.left - rowBounds.left + start / duration * waveformBounds.width;
+  const right = rowBounds.right - waveformBounds.right + (1 - end / duration) * waveformBounds.width;
+  overlay.style.top = `${waveformBounds.top - rowBounds.top}px`;
+  overlay.style.bottom = `${rowBounds.bottom - waveformBounds.bottom}px`;
+  overlay.style.left = `${left}px`;
+  overlay.style.right = `${Math.max(0, right)}px`;
 }
 
 function setSharedTrimFromMarker(row, marker, clientX) {
@@ -298,6 +346,8 @@ function startTrackPreview(row) {
   const start = Number.isFinite(savedPosition) && savedPosition >= bounds.start && savedPosition < bounds.end
     ? savedPosition : bounds.start;
   const play = () => {
+    applyPreviewAudioSettings(row);
+    previewAudioContext?.resume();
     audio.currentTime = start;
     audio.play().then(() => {
       setPreviewButton(row, true);
@@ -328,12 +378,20 @@ function renderWaveforms(preview) {
   const waves = $("#waveforms");
   waves.innerHTML = preview.map((track) => {
     const trackId = encodeURIComponent(track.name);
-    const channelGuide = track.stereo ? `<div class="stereo-channel-guide" aria-hidden="true"><span class="stereo-channel-label stereo-channel-label-left">L</span><span class="stereo-channel-label stereo-channel-label-right">R</span><span class="stereo-channel-divider"></span></div>` : "";
+  const channelGuide = track.stereo ? `<div class="stereo-channel-guide" aria-hidden="true"><span class="stereo-channel-label stereo-channel-label-left">L</span><span class="stereo-channel-label stereo-channel-label-right">R</span><span class="stereo-channel-divider"></span></div>` : "";
     return `<div class="wave-track" data-track="${trackId}" data-duration="${track.duration}"><label class="wave-name track-select"><input type="checkbox" name="selectedFiles" value="${track.name}" checked />${track.name}</label><button class="track-preview-button secondary" type="button">${t("previewPlay")}</button><audio class="track-preview-audio" preload="metadata" src="${track.audio}"></audio><div class="track-trim-controls hidden"><label>${t("trackStart")}<input class="track-trim-start" type="number" min="0" max="${track.duration}" step="0.001" value="0" /></label><label>${t("trackEnd")}<input class="track-trim-end" type="number" min="0" max="${track.duration}" step="0.001" value="${track.duration.toFixed(3)}" /></label><div class="track-range-controls"><div class="track-range-rail"></div><div class="track-range-fill"></div><input class="track-trim-start-range" type="range" min="0" max="${track.duration}" step="0.001" value="0" /><input class="track-trim-end-range" type="range" min="0" max="${track.duration}" step="0.001" value="${track.duration}" /></div></div><div class="wave-image-wrap"><img class="wave-image" src="${track.image}" alt="${track.name}" />${channelGuide}</div><div class="trim-range-overlay" data-duration="${track.duration}"><span class="playback-marker hidden" aria-hidden="true"></span><span class="trim-marker trim-marker-start" data-marker="start" aria-label="Trim start"></span><span class="trim-marker trim-marker-end" data-marker="end" aria-label="Trim end"></span></div></div>`;
   }).join("");
+  document.querySelectorAll(".wave-track").forEach((row) => {
+    const volume = document.createElement("label");
+    volume.className = "track-preview-volume";
+    volume.innerHTML = `<span>${t("previewVolume")}</span><input type="range" min="${PREVIEW_VOLUME_MIN}" max="${PREVIEW_VOLUME_MAX}" step="1" value="0" aria-label="${t("previewVolume")}" /><span class="track-preview-volume-number-row"><input class="track-preview-volume-number" type="number" min="${PREVIEW_VOLUME_MIN}" max="${PREVIEW_VOLUME_MAX}" step="1" value="0" aria-label="${t("previewVolume")}" /><span class="track-preview-volume-unit">dB</span></span>`;
+    row.querySelector(".wave-image-wrap").append(volume);
+  });
   ["#trim-start-range", "#trim-end-range"].forEach((selector) => { $(selector).max = waveformDuration; });
   $("#trim-end").max = waveformDuration;
   $("#trim-controls").classList.remove("hidden");
+  $("#trim-controls").classList.add("has-preview-volume");
+  $("#preview-volume-heading").classList.remove("hidden");
   $("#select-all").classList.remove("hidden");
   $("#select-none").classList.remove("hidden");
   $("#trim-end").value = waveformDuration.toFixed(3);
@@ -346,6 +404,17 @@ function renderWaveforms(preview) {
   syncTrim();
   document.querySelectorAll(".track-preview-audio").forEach((audio) => {
     const row = audio.closest(".wave-track");
+    const volume = row.querySelector(".track-preview-volume input[type=range]");
+    const volumeNumber = row.querySelector(".track-preview-volume-number");
+    volume.addEventListener("input", () => {
+      volumeNumber.value = volume.value;
+      applyPreviewAudioSettings(row);
+    });
+    volumeNumber.addEventListener("input", () => {
+      volume.value = Math.max(PREVIEW_VOLUME_MIN, Math.min(PREVIEW_VOLUME_MAX, Number(volumeNumber.value) || 0));
+      applyPreviewAudioSettings(row);
+    });
+    applyPreviewAudioSettings(row);
     audio.addEventListener("timeupdate", () => {
       audio.dataset.previewPosition = String(audio.currentTime);
       const bounds = previewBounds(row);
@@ -425,6 +494,13 @@ $("#choose-folder").addEventListener("click", async (event) => {
   }
 });
 $("#source").addEventListener("input", resetWaveformState);
+const previewLimiter = $("#preview-limiter");
+const savedPreviewLimiter = localStorage.getItem(PREVIEW_LIMITER_PREFERENCE_KEY);
+if (savedPreviewLimiter !== null) previewLimiter.checked = savedPreviewLimiter === "true";
+previewLimiter.addEventListener("change", () => {
+  localStorage.setItem(PREVIEW_LIMITER_PREFERENCE_KEY, String(previewLimiter.checked));
+  document.querySelectorAll(".wave-track").forEach(applyPreviewAudioSettings);
+});
 $("#output-format").addEventListener("change", updateOutputFormat);
 $("#load-waveforms").addEventListener("click", async () => {
   const source = $("#source").value.trim();
@@ -510,8 +586,8 @@ window.addEventListener("mouseup", endPlaybackDrag);
 $("#select-all").addEventListener("click", () => { $("#auto-deselect-silent").checked = false; document.querySelectorAll("input[name=selectedFiles]").forEach((item) => { item.checked = true; updateTrackSelectionState(item.closest(".wave-track")); }); });
 $("#select-none").addEventListener("click", () => { $("#auto-deselect-silent").checked = false; document.querySelectorAll("input[name=selectedFiles]").forEach((item) => { item.checked = false; updateTrackSelectionState(item.closest(".wave-track")); }); });
 window.addEventListener("resize", () => {
-  if (!$("#individual-trim").checked) return;
-  document.querySelectorAll(".wave-track").forEach((row) => syncIndividualTrim(row));
+  if ($("#individual-trim").checked) document.querySelectorAll(".wave-track").forEach((row) => syncIndividualTrim(row));
+  else syncTrim();
 });
 $("#open-output").addEventListener("click", async (event) => {
   try { await api("/api/open-folder", { method:"POST", body:JSON.stringify({path:event.currentTarget.dataset.path, language:currentLanguage()}) }); }
