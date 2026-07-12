@@ -61,6 +61,7 @@ function syncTrim(changed = "") {
     // Individual trim positions this overlay with inline pixels. Clear that
     // value when returning to shared trim so the shared marker is visible.
     overlay.style.top = "";
+    overlay.style.bottom = "";
     const duration = Number(overlay.dataset.duration) || waveformDuration;
     overlay.style.left = `${Math.min(100, start / duration * 100)}%`;
     overlay.style.right = `${Math.max(0, 100 - end / duration * 100)}%`;
@@ -162,7 +163,11 @@ function syncIndividualOverlay(row, start, end, fill = row.querySelector(".track
   const waveform = row.querySelector(".wave-image");
   const waveformBounds = waveform.getBoundingClientRect();
   const trackBounds = row.querySelector(".track-range-controls").getBoundingClientRect();
-  overlay.style.top = `${waveform.offsetTop}px`;
+  // The waveform is nested in a wrapper, so offsetTop is relative to that
+  // wrapper rather than the track. Use viewport rectangles to keep the trim
+  // overlay exactly within the waveform and away from the controls above it.
+  overlay.style.top = `${waveformBounds.top - rowBounds.top}px`;
+  overlay.style.bottom = `${rowBounds.bottom - waveformBounds.bottom}px`;
   if (!waveformBounds.width || !rowBounds.width) {
     overlay.style.left = `${start / duration * 100}%`;
     overlay.style.right = `${Math.max(0, 100 - end / duration * 100)}%`;
@@ -243,21 +248,41 @@ function reconcileTrackPreviews(changedRow = null) {
   document.querySelectorAll(".wave-track").forEach((row) => {
     if (changedRow && row !== changedRow && $("#individual-trim").checked) return;
     const audio = row.querySelector(".track-preview-audio");
-    if (!audio || audio.paused) return;
+    const marker = row.querySelector(".playback-marker");
+    if (!audio || audio.readyState < HTMLMediaElement.HAVE_METADATA) return;
     const { start, end } = previewBounds(row);
+    const outOfBounds = audio.currentTime < start || audio.currentTime >= end;
+    if (!outOfBounds) {
+      // Keep the playhead at the same absolute audio time while a paused trim
+      // range moves around it; only its relative position inside the range changes.
+      if (!audio.paused || !marker?.classList.contains("hidden")) updatePlaybackMarker(row);
+      return;
+    }
     // A newly moved trim boundary must never leave an old audio position playing
-    // beyond the highlighted range. Stop at the new start so the next Play is exact.
-    if (audio.currentTime < start || audio.currentTime >= end) stopTrackPreview(row, true);
-    else updatePlaybackMarker(row);
+    // beyond the highlighted range. While paused, move only when the playhead
+    // would fall outside the new range; otherwise leave it at its exact time.
+    if (!audio.paused) {
+      const boundary = audio.currentTime < start ? start : end;
+      stopTrackPreview(row, true, boundary);
+    }
+    else if (!marker?.classList.contains("hidden")) {
+      audio.currentTime = audio.currentTime < start ? start : end;
+      audio.dataset.previewPosition = String(audio.currentTime);
+      updatePlaybackMarker(row);
+    }
   });
 }
 
-function stopTrackPreview(row, reset = false) {
+function stopTrackPreview(row, reset = false, resetPosition = null) {
   const audio = row.querySelector(".track-preview-audio");
   if (!audio) return;
   audio.pause();
   if (reset && audio.readyState >= HTMLMediaElement.HAVE_METADATA) {
-    audio.currentTime = previewBounds(row).start;
+    const bounds = previewBounds(row);
+    const target = Number.isFinite(resetPosition)
+      ? Math.max(bounds.start, Math.min(bounds.end, resetPosition))
+      : bounds.start;
+    audio.currentTime = target;
     audio.dataset.previewPosition = String(audio.currentTime);
     row.querySelector(".playback-marker")?.classList.remove("hidden");
   }
@@ -323,8 +348,11 @@ function renderWaveforms(preview) {
     const row = audio.closest(".wave-track");
     audio.addEventListener("timeupdate", () => {
       audio.dataset.previewPosition = String(audio.currentTime);
-      if (audio.currentTime >= previewBounds(row).end) stopTrackPreview(row, true);
-      else updatePlaybackMarker(row);
+      const bounds = previewBounds(row);
+      if (audio.currentTime < bounds.start || audio.currentTime >= bounds.end) {
+        const boundary = audio.currentTime < bounds.start ? bounds.start : bounds.end;
+        stopTrackPreview(row, true, boundary);
+      } else updatePlaybackMarker(row);
     });
     audio.addEventListener("ended", () => setPreviewButton(row, false));
     audio.addEventListener("error", () => setPreviewButton(row, false));
