@@ -117,7 +117,7 @@
   "invalidDependencyAction": "Invalid dependency action.",
   "selectSourceFolderPrompt": "Select the folder containing audio tracks",
   "folderMissing": "Folder does not exist.",
-  "splitStereo": "↔ Split stereo tracks into independent mono tracks",
+  "splitStereo": "Split stereo tracks into independent mono tracks",
   "splitStereoReloadWaveform": "Reload waveforms to apply the stereo split.",
   "couldNotSplitStereo": "Could not split stereo track: {file}"
 }

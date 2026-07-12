@@ -74,7 +74,7 @@
     "speedHelp": "Más pistas pueden terminar antes, pero usan más CPU y disco. No combina trabajos separados.",
     "openFinder": "▣ Abrir en Finder",
     "previewUnavailable": "Este archivo no se puede previsualizar en este navegador.",
-    "splitStereo": "↔ Dividir el estéreo en pistas mono independientes",
+    "splitStereo": "Dividir el estéreo en pistas mono independientes",
     "splitStereoReloadWaveform": "Vuelve a cargar las formas de onda para aplicar la división estéreo.",
     "couldNotSplitStereo": "No se pudo dividir la pista estéreo: {file}"
   }

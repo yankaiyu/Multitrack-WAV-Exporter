@@ -74,7 +74,7 @@
     "speedHelp": "트랙을 많이 처리하면 더 빨리 끝나지만 CPU와 디스크를 더 사용합니다. 별도 작업을 합치지는 않습니다.",
     "openFinder": "▣ Finder에서 열기",
     "previewUnavailable": "이 파일은 현재 브라우저에서 미리 볼 수 없습니다.",
-    "splitStereo": "↔ 스테레오를 독립적인 좌우 모노 트랙으로 분리",
+    "splitStereo": "스테레오를 독립적인 좌우 모노 트랙으로 분리",
     "splitStereoReloadWaveform": "스테레오 분할을 적용하려면 파형을 다시 불러오세요.",
     "couldNotSplitStereo": "스테레오 트랙을 분리할 수 없습니다: {file}"
   }

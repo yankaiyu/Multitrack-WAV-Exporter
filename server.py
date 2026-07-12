@@ -30,6 +30,7 @@ JOBS: dict[str, dict] = {}
 JOBS_LOCK = threading.Lock()
 WAVEFORM_FILES: dict[str, Path] = {}
 AUDIO_FILES: dict[str, Path] = {}
+WAVEFORM_RENDER_VERSION = "v2"
 SOURCE_LOCKS: dict[str, threading.Lock] = {}
 SOURCE_LOCKS_LOCK = threading.Lock()
 LOCALE_CACHE: dict[str, dict[str, str]] = {}
@@ -243,12 +244,13 @@ def waveform_job(job_id: str, source_text: str, language: str = "zh", split_ster
             duration_result = subprocess.run([ffprobe, "-v", "error", "-show_entries", "format=duration",
                                               "-of", "default=nokey=1:noprint_wrappers=1", str(file)], capture_output=True, text=True)
             duration = float(duration_result.stdout.strip())
-            image = cache / f"{file.name}.png"
+            image = cache / f"{WAVEFORM_RENDER_VERSION}-{file.name}.png"
             # Regenerate only when the source changed. The aeval stage removes non-finite
             # float samples before showwavespic draws the visual preview.
             if not image.exists() or image.stat().st_mtime_ns < file.stat().st_mtime_ns:
                 expressions = "|".join(f"if(isnan(val({channel}))+isinf(val({channel})),0,val({channel}))" for channel in range(channels))
-                filter_graph = f"[0:a]aeval=exprs='{expressions}':c=same,showwavespic=s=1400x128:colors=0xD2F26C[wave]"
+                channel_layout = ":split_channels=1" if channels == 2 else ""
+                filter_graph = f"[0:a]aeval=exprs='{expressions}':c=same,showwavespic=s=1400x128:colors=0xD2F26C{channel_layout}[wave]"
                 temporary_image = cache / f".{file.stem}.{uuid.uuid4().hex}.png"
                 command = [ffmpeg, "-hide_banner", "-y", "-i", str(file), "-filter_complex", filter_graph,
                            "-map", "[wave]", "-frames:v", "1", str(temporary_image)]
@@ -261,7 +263,7 @@ def waveform_job(job_id: str, source_text: str, language: str = "zh", split_ster
             AUDIO_FILES[audio_token] = file
             # Use the same peak measurement used by export decisions, so the UI can
             # optionally deselect tracks below its empty-track threshold.
-            previews.append({"name": file.name, "duration": duration, "peak": peak_of_audio(file),
+            previews.append({"name": file.name, "duration": duration, "peak": peak_of_audio(file), "stereo": channels == 2,
                              "image": f"/api/waveform/{token}", "audio": f"/api/audio/{audio_token}"})
             append_localized_log(job_id, "waveformProgress", current=index + 1, total=len(files), file=file.name)
             set_localized_progress(job_id, round((index + 1) / len(files) * 100), "generatingWaveforms", current=index + 1, total=len(files))

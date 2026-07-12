@@ -76,6 +76,7 @@ legend { padding: 0 10px 0 0; }
 #package-zip-option, #split-stereo-option, #individual-trim-option, #auto-deselect-silent-option { align-items: center; display: flex; gap: 8px; }
 #package-zip-option input, #split-stereo-option input, #individual-trim-option input, #auto-deselect-silent-option input { margin: 0; }
 #package-zip-option span, #split-stereo-option span, #individual-trim-option span, #auto-deselect-silent-option span { display: inline; margin: 0; }
+.split-stereo-icon { background: var(--accent); border-radius: 4px; color: #162008; display: inline-block !important; font-size: .72em; font-weight: 800; letter-spacing: -.04em; line-height: 1.45; padding: 1px 4px; }
 #auto-deselect-silent-option { flex-wrap: wrap; }
 #auto-deselect-silent-option small { flex-basis: 100%; margin: 0; }
 #individual-trim-option.hidden, #auto-deselect-silent-option.hidden { display: none; }
@@ -113,8 +114,15 @@ legend { padding: 0 10px 0 0; }
 .track-range-controls input[type=range] { appearance: none; background: transparent; cursor: pointer; height: 26px; left: calc(0px - var(--track-thumb-radius)); margin: 0; pointer-events: none; position: absolute; top: 0; width: calc(100% + var(--track-thumb-size)); }
 .track-range-controls input[type=range]::-webkit-slider-thumb { appearance: none; background: var(--accent); border: 2px solid #effbd0; border-radius: 50%; height: var(--track-thumb-size); pointer-events: auto; width: var(--track-thumb-size); }
 .track-range-controls input[type=range]::-moz-range-thumb { background: var(--accent); border: 2px solid #effbd0; border-radius: 50%; height: var(--track-thumb-size); pointer-events: auto; width: var(--track-thumb-size); }
+.wave-image-wrap { position: relative; }
 .wave-image { display: block; height: 76px; width: 100%; object-fit: fill; opacity: .9; cursor: crosshair; }
-.individual-trim-active .wave-image { margin-inline: 6px; width: calc(100% - 12px); }
+.individual-trim-active .wave-image-wrap { margin-inline: 6px; }
+.individual-trim-active .wave-image { margin: 0; width: 100%; }
+.stereo-channel-guide { bottom: 0; left: 0; pointer-events: none; position: absolute; right: 0; top: 0; }
+.stereo-channel-divider { border-top: 1px solid color-mix(in srgb, var(--accent) 60%, transparent); left: 0; position: absolute; right: 0; top: 50%; }
+.stereo-channel-label { background: color-mix(in srgb, #0d1213 72%, transparent); border-radius: 3px; color: var(--accent); font: 700 10px/1 ui-monospace, SFMono-Regular, monospace; left: 4px; padding: 2px 3px; position: absolute; z-index: 1; }
+.stereo-channel-label-left { top: 4px; }
+.stereo-channel-label-right { bottom: 4px; }
 .trim-range-overlay { position: absolute; top: 22px; bottom: 0; border-left: 2px solid var(--accent); border-right: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 11%, transparent); pointer-events: none; }
 .individual-trim-active .trim-range-overlay { top: 112px; }
 .trim-marker { bottom: 0; cursor: ew-resize; pointer-events: auto; position: absolute; top: 0; touch-action: none; width: 24px; z-index: 2; }

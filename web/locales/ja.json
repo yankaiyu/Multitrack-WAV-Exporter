@@ -119,7 +119,7 @@
     "invalidDependencyAction": "依存関係の操作が無効です。",
     "selectSourceFolderPrompt": "音声トラックを含むフォルダを選択",
     "folderMissing": "フォルダが存在しません。",
-    "splitStereo": "↔ ステレオを左右の独立したモノラルトラックに分割",
+    "splitStereo": "ステレオを左右の独立したモノラルトラックに分割",
     "splitStereoReloadWaveform": "ステレオ分割を適用するには波形を再読み込みしてください。",
     "couldNotSplitStereo": "ステレオトラックを分割できません：{file}"
   }
