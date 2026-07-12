@@ -12,6 +12,7 @@ To add a UI language, add a complete `web/locales/<code>.json` file; the app dis
 - <strong>Input:</strong> WAV, AIFF, FLAC, MP3, M4A, and AAC.
 - <strong>Output:</strong> MP3, M4A (AAC), or WAV at 32-bit float, 24-bit PCM, or 16-bit PCM.
 - <strong>Flexible preparation:</strong> waveform preview, single-track trim audition, track selection, shared or individual trim, and three level-processing modes.
+- <strong>Stereo splitting:</strong> optionally split stereo files into independent left/right mono tracks for separate preview, trimming, and export.
 - <strong>Easy sharing:</strong> optional ZIP package and a local-only workflow.
 
 ## Interface preview
@@ -62,6 +63,7 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed behavior and release notes.
 - <strong>输入：</strong> WAV、AIFF、FLAC、MP3、M4A、AAC。
 - <strong>输出：</strong> MP3、M4A（AAC），或 32-bit float、24-bit PCM、16-bit PCM WAV。
 - <strong>灵活准备：</strong> 波形预览、单轨裁剪试听、轨道选择、统一或逐轨裁剪，以及三种音量处理模式。
+- <strong>立体声拆分：</strong> 可将立体声文件拆为独立的左右单声道轨道，分别预览、裁剪和导出。
 - <strong>方便分享：</strong> 可选 ZIP 分享包，全部本机处理。
 
 ## 快速开始

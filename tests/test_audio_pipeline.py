@@ -21,6 +21,13 @@ def write_float_wav(path: Path, values: list[float], sample_rate: int = 48_000) 
                      + b"fmt " + struct.pack("<I", len(fmt)) + fmt + b"data" + struct.pack("<I", len(data)) + data)
 
 
+def write_stereo_float_wav(path: Path, values: list[tuple[float, float]], sample_rate: int = 48_000) -> None:
+    data = struct.pack(f"<{len(values) * 2}f", *(sample for pair in values for sample in pair))
+    fmt = struct.pack("<HHIIHH", 3, 2, sample_rate, sample_rate * 8, 8, 32)
+    path.write_bytes(b"RIFF" + struct.pack("<I", 4 + (8 + len(fmt)) + (8 + len(data))) + b"WAVE"
+                     + b"fmt " + struct.pack("<I", len(fmt)) + fmt + b"data" + struct.pack("<I", len(data)) + data)
+
+
 class LocaleTests(unittest.TestCase):
     def test_locale_files_share_the_same_translation_keys(self) -> None:
         locales = server.available_locales()
@@ -39,7 +46,6 @@ class LocaleTests(unittest.TestCase):
         self.assertIn("プリフェーダー", server.localized("ja", "perTrackHelp"))
         self.assertIn("音声ファイル", server.localized("ja", "convertingFiles", count=1, output="out"))
 
-
 @unittest.skipUnless(server.tool_path("ffmpeg") and server.tool_path("ffprobe"), "FFmpeg and FFprobe are required")
 class FloatAudioPipelineTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -51,6 +57,17 @@ class FloatAudioPipelineTests(unittest.TestCase):
     def tearDown(self) -> None:
         server.JOBS.pop(self.job_id, None)
         self.temp.cleanup()
+
+    def test_stereo_split_creates_two_mono_sources(self) -> None:
+        source = self.root / "stereo.wav"
+        write_stereo_float_wav(source, [(0.25, -0.25)] * 4_800)
+        split = server.split_stereo_sources(self.job_id, [source], self.root / "split", True)
+        self.assertEqual([path.name for path in split], ["stereo_L.wav", "stereo_R.wav"])
+        ffprobe = server.tool_path("ffprobe")
+        channels = [subprocess.run([ffprobe, "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=channels",
+                                    "-of", "default=nokey=1:noprint_wrappers=1", str(path)], capture_output=True, text=True, check=True).stdout.strip()
+                    for path in split]
+        self.assertEqual(channels, ["1", "1"])
 
     def test_peak_measurement_keeps_values_above_zero_dbfs(self) -> None:
         # A sample amplitude of 4.0 is +12.04 dBFS, valid in a float WAV.

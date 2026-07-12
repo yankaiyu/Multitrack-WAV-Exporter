@@ -10,6 +10,7 @@
 - ZIP share packages, per-job progress, and selectable per-job track concurrency.
 - English, Simplified Chinese, Traditional Chinese, Japanese, Spanish, French, and Korean interface.
 - Locale files are discovered automatically, so a new complete JSON locale adds a UI language.
+- Optional stereo-to-independent-mono splitting with separate waveform preview, trim, and export for left/right channels.
 
 ### Safety and behavior
 

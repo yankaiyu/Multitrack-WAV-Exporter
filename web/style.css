@@ -73,9 +73,9 @@ legend { padding: 0 10px 0 0; }
 .notice { border-left: 3px solid var(--warn); margin: 24px 0; padding: 2px 0 2px 12px; font-size: 14px; }
 .checkbox { display: block; margin: 0 0 20px; color: var(--muted); }
 .checkbox input { accent-color: var(--accent); margin-right: 7px; }
-#package-zip-option, #individual-trim-option, #auto-deselect-silent-option { align-items: center; display: flex; gap: 8px; }
-#package-zip-option input, #individual-trim-option input, #auto-deselect-silent-option input { margin: 0; }
-#package-zip-option span, #individual-trim-option span, #auto-deselect-silent-option span { display: inline; margin: 0; }
+#package-zip-option, #split-stereo-option, #individual-trim-option, #auto-deselect-silent-option { align-items: center; display: flex; gap: 8px; }
+#package-zip-option input, #split-stereo-option input, #individual-trim-option input, #auto-deselect-silent-option input { margin: 0; }
+#package-zip-option span, #split-stereo-option span, #individual-trim-option span, #auto-deselect-silent-option span { display: inline; margin: 0; }
 #auto-deselect-silent-option { flex-wrap: wrap; }
 #auto-deselect-silent-option small { flex-basis: 100%; margin: 0; }
 #individual-trim-option.hidden, #auto-deselect-silent-option.hidden { display: none; }
@@ -113,14 +113,15 @@ legend { padding: 0 10px 0 0; }
 .track-range-controls input[type=range] { appearance: none; background: transparent; cursor: pointer; height: 26px; left: calc(0px - var(--track-thumb-radius)); margin: 0; pointer-events: none; position: absolute; top: 0; width: calc(100% + var(--track-thumb-size)); }
 .track-range-controls input[type=range]::-webkit-slider-thumb { appearance: none; background: var(--accent); border: 2px solid #effbd0; border-radius: 50%; height: var(--track-thumb-size); pointer-events: auto; width: var(--track-thumb-size); }
 .track-range-controls input[type=range]::-moz-range-thumb { background: var(--accent); border: 2px solid #effbd0; border-radius: 50%; height: var(--track-thumb-size); pointer-events: auto; width: var(--track-thumb-size); }
-.wave-image { display: block; height: 76px; width: 100%; object-fit: fill; opacity: .9; }
+.wave-image { display: block; height: 76px; width: 100%; object-fit: fill; opacity: .9; cursor: crosshair; }
 .individual-trim-active .wave-image { margin-inline: 6px; width: calc(100% - 12px); }
 .trim-range-overlay { position: absolute; top: 22px; bottom: 0; border-left: 2px solid var(--accent); border-right: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 11%, transparent); pointer-events: none; }
 .individual-trim-active .trim-range-overlay { top: 112px; }
 .trim-marker { bottom: 0; cursor: ew-resize; pointer-events: auto; position: absolute; top: 0; touch-action: none; width: 24px; z-index: 2; }
 .trim-marker-start { left: -12px; }
 .trim-marker-end { right: -12px; }
-.playback-marker { background: #fff; bottom: 0; box-shadow: 0 0 8px #fff; position: absolute; top: 0; transform: translateX(-50%); width: 2px; z-index: 1; }
+.playback-marker { background: transparent; bottom: 0; cursor: ew-resize; pointer-events: auto; position: absolute; top: 0; touch-action: none; transform: translateX(-50%); width: 20px; z-index: 3; }
+.playback-marker::after { background: #fff; box-shadow: 0 0 8px #fff; content: ""; height: 100%; left: 9px; position: absolute; top: 0; width: 2px; }
 .waveform-load-button { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 42%, transparent), 0 5px 16px color-mix(in srgb, var(--accent) 20%, transparent); }
 .wave-track.is-deselected { background: #090d0e; border-color: #26302f; }
 .wave-track.is-deselected .wave-name { color: #82908f; }

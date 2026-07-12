@@ -3,6 +3,7 @@ import { changeLanguage, currentLanguage, initializeLanguage, t } from "./i18n.j
 import { refreshStatus, watch } from "./jobs.js";
 
 const ZIP_PREFERENCE_KEY = "packageZip";
+const SPLIT_STEREO_PREFERENCE_KEY = "splitStereo";
 let selectingFolder = false;
 
 function sendHeartbeat() {
@@ -12,12 +13,14 @@ function sendHeartbeat() {
 let waveformTracks = [];
 let waveformDuration = 0;
 let globalMarkerDrag = null;
+let playbackDrag = null;
 
 function resetWaveformState() {
   document.querySelectorAll(".track-preview-audio").forEach((audio) => audio.pause());
   waveformTracks = [];
   waveformDuration = 0;
   globalMarkerDrag = null;
+  playbackDrag = null;
   $("#waveforms").innerHTML = "";
   $("#waveform-status").textContent = "";
   $("#trim-controls").classList.add("hidden");
@@ -93,6 +96,42 @@ function dragSharedMarker(event) {
 
 function endSharedMarkerDrag() {
   globalMarkerDrag = null;
+}
+
+function seekPlaybackFromPointer(row, clientX) {
+  const audio = row.querySelector(".track-preview-audio");
+  const overlay = row.querySelector(".trim-range-overlay");
+  if (!audio || !overlay) return;
+  const bounds = overlay.getBoundingClientRect();
+  if (!bounds.width) return;
+  const { start, end } = previewBounds(row);
+  const ratio = Math.max(0, Math.min(1, (clientX - bounds.left) / bounds.width));
+  audio.currentTime = start + ratio * (end - start);
+  audio.dataset.previewPosition = String(audio.currentTime);
+  row.querySelector(".playback-marker")?.classList.remove("hidden");
+  updatePlaybackMarker(row);
+}
+
+function beginPlaybackDrag(event) {
+  const marker = event.target.closest(".playback-marker");
+  if (!marker || event.button !== 0) return;
+  const row = marker.closest(".wave-track");
+  const audio = row?.querySelector(".track-preview-audio");
+  if (!row || row.classList.contains("is-deselected") || !audio || audio.readyState < HTMLMediaElement.HAVE_METADATA) return;
+  event.preventDefault();
+  playbackDrag = { row };
+  if (event.pointerId !== undefined) marker.setPointerCapture?.(event.pointerId);
+  seekPlaybackFromPointer(row, event.clientX);
+}
+
+function dragPlayback(event) {
+  if (!playbackDrag) return;
+  event.preventDefault();
+  seekPlaybackFromPointer(playbackDrag.row, event.clientX);
+}
+
+function endPlaybackDrag() {
+  playbackDrag = null;
 }
 
 function syncIndividualTrim(row) {
@@ -211,7 +250,10 @@ function stopTrackPreview(row, reset = false) {
   const audio = row.querySelector(".track-preview-audio");
   if (!audio) return;
   audio.pause();
-  if (reset && audio.readyState >= HTMLMediaElement.HAVE_METADATA) audio.currentTime = previewBounds(row).start;
+  if (reset && audio.readyState >= HTMLMediaElement.HAVE_METADATA) {
+    audio.currentTime = previewBounds(row).start;
+    audio.dataset.previewPosition = String(audio.currentTime);
+  }
   setPreviewButton(row, false);
 }
 
@@ -219,7 +261,10 @@ function startTrackPreview(row) {
   const audio = row.querySelector(".track-preview-audio");
   if (!audio) return;
   document.querySelectorAll(".wave-track").forEach((other) => { if (other !== row) stopTrackPreview(other); });
-  const start = previewBounds(row).start;
+  const bounds = previewBounds(row);
+  const savedPosition = Number(audio.dataset.previewPosition);
+  const start = Number.isFinite(savedPosition) && savedPosition >= bounds.start && savedPosition < bounds.end
+    ? savedPosition : bounds.start;
   const play = () => {
     audio.currentTime = start;
     audio.play().then(() => {
@@ -268,6 +313,7 @@ function renderWaveforms(preview) {
   document.querySelectorAll(".track-preview-audio").forEach((audio) => {
     const row = audio.closest(".wave-track");
     audio.addEventListener("timeupdate", () => {
+      audio.dataset.previewPosition = String(audio.currentTime);
       if (audio.currentTime >= previewBounds(row).end) stopTrackPreview(row, true);
       else updatePlaybackMarker(row);
     });
@@ -349,7 +395,7 @@ $("#load-waveforms").addEventListener("click", async () => {
   $("#load-waveforms").disabled = true;
   $("#waveform-status").textContent = t("loadingWaveforms");
   $("#waveforms").innerHTML = "";
-  try { pollWaveforms((await api("/api/waveforms", { method:"POST", body:JSON.stringify({source, language:currentLanguage()}) })).job); }
+  try { pollWaveforms((await api("/api/waveforms", { method:"POST", body:JSON.stringify({source, language:currentLanguage(), splitStereo: $("#split-stereo").checked}) })).job); }
   catch (error) { $("#load-waveforms").disabled = false; $("#waveform-status").textContent = error.message; }
 });
 $("#trim-start").addEventListener("input", () => syncTrim("start"));
@@ -374,6 +420,17 @@ $("#waveforms").addEventListener("input", (event) => {
 $("#waveforms").addEventListener("click", (event) => {
   const button = event.target.closest(".track-preview-button");
   if (button) toggleTrackPreview(button.closest(".wave-track"));
+  const waveform = event.target.closest(".wave-image");
+  if (waveform) {
+    const row = waveform.closest(".wave-track");
+    const audio = row?.querySelector(".track-preview-audio");
+    if (!row || row.classList.contains("is-deselected") || !audio) return;
+    if (audio.readyState >= HTMLMediaElement.HAVE_METADATA) seekPlaybackFromPointer(row, event.clientX);
+    else {
+      audio.addEventListener("loadedmetadata", () => seekPlaybackFromPointer(row, event.clientX), { once: true });
+      audio.load();
+    }
+  }
 });
 function beginSharedMarkerDrag(event) {
   const marker = event.target.closest(".trim-marker");
@@ -389,11 +446,18 @@ function beginSharedMarkerDrag(event) {
 }
 $("#waveforms").addEventListener("pointerdown", beginSharedMarkerDrag);
 $("#waveforms").addEventListener("mousedown", beginSharedMarkerDrag);
+$("#waveforms").addEventListener("pointerdown", beginPlaybackDrag);
+$("#waveforms").addEventListener("mousedown", beginPlaybackDrag);
 window.addEventListener("pointermove", dragSharedMarker, { passive: false });
 window.addEventListener("pointerup", endSharedMarkerDrag);
 window.addEventListener("pointercancel", endSharedMarkerDrag);
 window.addEventListener("mousemove", dragSharedMarker, { passive: false });
 window.addEventListener("mouseup", endSharedMarkerDrag);
+window.addEventListener("pointermove", dragPlayback, { passive: false });
+window.addEventListener("pointerup", endPlaybackDrag);
+window.addEventListener("pointercancel", endPlaybackDrag);
+window.addEventListener("mousemove", dragPlayback, { passive: false });
+window.addEventListener("mouseup", endPlaybackDrag);
 $("#select-all").addEventListener("click", () => { $("#auto-deselect-silent").checked = false; document.querySelectorAll("input[name=selectedFiles]").forEach((item) => { item.checked = true; updateTrackSelectionState(item.closest(".wave-track")); }); });
 $("#select-none").addEventListener("click", () => { $("#auto-deselect-silent").checked = false; document.querySelectorAll("input[name=selectedFiles]").forEach((item) => { item.checked = false; updateTrackSelectionState(item.closest(".wave-track")); }); });
 window.addEventListener("resize", () => {
@@ -431,6 +495,14 @@ const zipCheckbox = document.querySelector("input[name=packageZip]");
 const savedZipPreference = localStorage.getItem(ZIP_PREFERENCE_KEY);
 if (savedZipPreference !== null) zipCheckbox.checked = savedZipPreference === "true";
 zipCheckbox.addEventListener("change", () => localStorage.setItem(ZIP_PREFERENCE_KEY, String(zipCheckbox.checked)));
+const splitStereoCheckbox = document.querySelector("#split-stereo");
+const savedSplitStereoPreference = localStorage.getItem(SPLIT_STEREO_PREFERENCE_KEY);
+if (savedSplitStereoPreference !== null) splitStereoCheckbox.checked = savedSplitStereoPreference === "true";
+splitStereoCheckbox.addEventListener("change", () => {
+  localStorage.setItem(SPLIT_STEREO_PREFERENCE_KEY, String(splitStereoCheckbox.checked));
+  resetWaveformState();
+  $("#waveform-status").textContent = t("splitStereoReloadWaveform");
+});
 initializeLanguage().then(() => {
   sendHeartbeat();
   const heartbeatTimer = setInterval(sendHeartbeat, 5000);

@@ -73,6 +73,9 @@
     "speedFast": "Rapide — 4 pistes à la fois",
     "speedHelp": "Plus de pistes peuvent terminer un morceau plus vite, mais utilisent davantage de CPU et de disque. Les tâches séparées ne sont pas combinées.",
     "openFinder": "▣ Ouvrir dans le Finder",
-    "previewUnavailable": "Ce fichier ne peut pas être prévisualisé dans ce navigateur."
+    "previewUnavailable": "Ce fichier ne peut pas être prévisualisé dans ce navigateur.",
+    "splitStereo": "↔ Diviser la stéréo en pistes mono indépendantes",
+    "splitStereoReloadWaveform": "Rechargez les formes d’onde pour appliquer la séparation stéréo.",
+    "couldNotSplitStereo": "Impossible de séparer la piste stéréo : {file}"
   }
 }

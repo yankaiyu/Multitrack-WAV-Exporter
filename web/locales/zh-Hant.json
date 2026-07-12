@@ -73,6 +73,9 @@
     "speedFast": "快速 — 一次處理 4 條軌道",
     "speedHelp": "更高並發可讓同一首歌更快完成，但會佔用更多 CPU 和磁碟；不會合併不同網頁任務。",
     "openFinder": "▣ 在 Finder 中開啟",
-    "previewUnavailable": "此檔案無法在目前瀏覽器中試聽。"
+    "previewUnavailable": "此檔案無法在目前瀏覽器中試聽。",
+    "splitStereo": "↔ 將立體聲拆分為獨立的左右單聲道軌道",
+    "splitStereoReloadWaveform": "請重新載入波形以套用立體聲拆分。",
+    "couldNotSplitStereo": "無法拆分立體聲軌道：{file}"
   }
 }

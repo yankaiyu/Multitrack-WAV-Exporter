@@ -116,5 +116,8 @@
   "zipCreated": "已创建分享 ZIP：{path}\n",
   "invalidDependencyAction": "无效的依赖操作。",
   "selectSourceFolderPrompt": "选择包含多轨音频的歌曲文件夹",
-  "folderMissing": "文件夹不存在。"
+  "folderMissing": "文件夹不存在。",
+  "splitStereo": "↔ 将立体声拆分为独立的左右单声道轨道",
+  "splitStereoReloadWaveform": "请重新加载波形以应用立体声拆分。",
+  "couldNotSplitStereo": "无法拆分立体声轨道：{file}"
 }

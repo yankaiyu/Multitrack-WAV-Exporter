@@ -143,6 +143,41 @@ def run_process(job_id: str, command: list[str], cwd: Path | None = None) -> int
     return process.wait()
 
 
+def audio_channel_count(path: Path, language: str = "en") -> int:
+    ffprobe = tool_path("ffprobe")
+    if not ffprobe:
+        raise ValueError(localized(language, "missingFfmpegProbe"))
+    result = subprocess.run([ffprobe, "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=channels",
+                             "-of", "default=nokey=1:noprint_wrappers=1", str(path)], capture_output=True, text=True)
+    try:
+        return int(result.stdout.strip())
+    except ValueError as error:
+        raise RuntimeError(localized(language, "couldNotReadChannels", file=path.name)) from error
+
+
+def split_stereo_sources(job_id: str, files: list[Path], workspace: Path, enabled: bool) -> list[Path]:
+    """Create temporary mono sources for stereo files when independent tracks are enabled."""
+    if not enabled:
+        return files
+    ffmpeg = tool_path("ffmpeg")
+    if not ffmpeg:
+        raise ValueError(localized(job_language(job_id), "missingFfmpeg"))
+    workspace.mkdir(parents=True, exist_ok=True)
+    expanded: list[Path] = []
+    for source in files:
+        if audio_channel_count(source, job_language(job_id)) != 2:
+            expanded.append(source)
+            continue
+        for channel, suffix in enumerate(("L", "R")):
+            mono = workspace / f"{source.stem}_{suffix}.wav"
+            command = [ffmpeg, "-hide_banner", "-y", "-i", str(source), "-af", f"pan=mono|c0=c{channel}",
+                       "-c:a", "pcm_f32le", str(mono)]
+            if run_process(job_id, command) != 0:
+                raise RuntimeError(localized(job_language(job_id), "couldNotSplitStereo", file=source.name))
+            expanded.append(mono)
+    return expanded
+
+
 def sanitized_inputs(job_id: str, files: list[Path], workspace: Path,
                      silence_threshold: float, trim_start: float, trim_end: float | None, workers: int,
                      track_trims: dict[str, dict] | None = None) -> tuple[dict[Path, Path], set[Path]]:
@@ -195,7 +230,7 @@ def sanitized_inputs(job_id: str, files: list[Path], workspace: Path,
     return finite, blank
 
 
-def waveform_job(job_id: str, source_text: str, language: str = "zh") -> None:
+def waveform_job(job_id: str, source_text: str, language: str = "zh", split_stereo: bool = False) -> None:
     """Generate compact cached waveform PNGs for the trimming UI."""
     try:
         source = Path(source_text).expanduser().resolve()
@@ -207,8 +242,21 @@ def waveform_job(job_id: str, source_text: str, language: str = "zh") -> None:
             raise ValueError(localized(language, "missingFfmpegProbe"))
         cache = source / ".multitrack-audio-exporter-preview"
         cache.mkdir(exist_ok=True)
+        preview_files: list[Path] = []
+        for file in files:
+            if split_stereo and audio_channel_count(file, language) == 2:
+                for channel, suffix in enumerate(("L", "R")):
+                    mono = cache / f"{file.stem}_{suffix}.wav"
+                    if not mono.exists() or mono.stat().st_mtime_ns < file.stat().st_mtime_ns:
+                        command = [ffmpeg, "-hide_banner", "-y", "-i", str(file), "-af", f"pan=mono|c0=c{channel}",
+                                   "-c:a", "pcm_f32le", str(mono)]
+                        if run_process(job_id, command) != 0:
+                            raise RuntimeError(localized(language, "couldNotSplitStereo", file=file.name))
+                    preview_files.append(mono)
+            else:
+                preview_files.append(file)
         previews = []
-        for index, file in enumerate(files):
+        for index, file in enumerate(preview_files):
             probe = subprocess.run([ffprobe, "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=channels",
                                     "-of", "default=nokey=1:noprint_wrappers=1", str(file)], capture_output=True, text=True)
             channels = int(probe.stdout.strip())
@@ -278,6 +326,7 @@ def convert_job(job_id: str, options: dict) -> None:
 
 
 def _convert_job(job_id: str, options: dict) -> None:
+    split_workspace = None
     try:
         source = Path(options["source"]).expanduser().resolve()
         if not source.is_dir():
@@ -285,6 +334,10 @@ def _convert_job(job_id: str, options: dict) -> None:
         files = sorted([p for p in source.iterdir() if p.is_file() and p.suffix.lower() in INPUT_EXTENSIONS])
         if not files:
             raise ValueError(localized(job_language(job_id), "noSupportedAudioFiles"))
+        split_stereo = options.get("splitStereo") in {True, "on", "true", "1"}
+        if split_stereo:
+            split_workspace = tempfile.TemporaryDirectory(prefix="multitrack-audio-split-")
+            files = split_stereo_sources(job_id, files, Path(split_workspace.name), True)
         selected = options.get("selectedFiles")
         if selected is not None:
             if isinstance(selected, str):
@@ -433,9 +486,13 @@ def _convert_job(job_id: str, options: dict) -> None:
             append_localized_log(job_id, "zipCreated", path=zip_path)
 
         done_label = localized(job_language(job_id), "done")
+        if split_workspace:
+            split_workspace.cleanup()
         with JOBS_LOCK:
             JOBS[job_id].update(status="done", output=str(output), zip=zip_path, progress=100, progressLabel=done_label)
     except Exception as error:
+        if split_workspace:
+            split_workspace.cleanup()
         append_localized_log(job_id, "errorLog", error=error)
         with JOBS_LOCK:
             JOBS[job_id]["status"] = "error"
@@ -571,7 +628,8 @@ class Handler(SimpleHTTPRequestHandler):
                 with JOBS_LOCK:
                     JOBS[job_id] = {"status": "running", "log": "", "output": None, "preview": None, "progress": 0,
                                     "progressLabel": localized(data.get("language"), "waitingToStart"), "language": data.get("language", "en")}
-                threading.Thread(target=waveform_job, args=(job_id, data["source"], data.get("language", "zh")), daemon=True).start()
+                threading.Thread(target=waveform_job, args=(job_id, data["source"], data.get("language", "zh"),
+                                                             data.get("splitStereo") in {True, "on", "true", "1"}), daemon=True).start()
                 self.json_response({"job": job_id})
             elif self.path == "/api/dependencies":
                 action = data.get("action")
