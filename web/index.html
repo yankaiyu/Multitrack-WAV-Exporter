@@ -35,7 +35,7 @@
 
         <label id="split-stereo-option" class="checkbox"><input id="split-stereo" type="checkbox" name="splitStereo" /> <span class="split-stereo-icon" aria-hidden="true">L/R</span> <span data-i18n="splitStereo">Split stereo tracks into independent mono tracks</span></label>
         <section class="trim-section">
-          <div class="section-heading"><div><h2 data-i18n="trimTitle">Waveforms & trim</h2><p data-i18n="trimHelp">Optional. Load waveforms to trim or choose tracks.</p></div><div class="preview-actions"><button id="select-all" type="button" class="text-button hidden" data-i18n="selectAll">✓ Select all</button><button id="select-none" type="button" class="text-button hidden" data-i18n="selectNone">✕ Select none</button><button id="load-waveforms" type="button" class="primary waveform-load-button" data-i18n="loadWaveforms">〰️ Load waveforms</button></div></div>
+          <div class="section-heading"><div><h2 data-i18n="trimTitle">Waveforms & trim</h2><p data-i18n="trimHelp">Optional. Load waveforms to trim, audition, adjust preview volume, or choose tracks.</p></div><div class="preview-actions"><button id="select-all" type="button" class="text-button hidden" data-i18n="selectAll">✓ Select all</button><button id="select-none" type="button" class="text-button hidden" data-i18n="selectNone">✕ Select none</button><button id="load-waveforms" type="button" class="primary waveform-load-button" data-i18n="loadWaveforms">〰️ Load waveforms</button></div></div>
           <div id="trim-controls" class="trim-controls hidden">
             <label><span data-i18n="trimStart">Start (seconds)</span><input id="trim-start" name="trimStart" type="number" min="0" step="0.001" value="0" /></label>
             <label><span data-i18n="trimEnd">End (seconds)</span><input id="trim-end" name="trimEnd" type="number" min="0" step="0.001" /></label>
@@ -60,10 +60,12 @@
             <span><strong data-i18n="preserve">Preserve relative levels</strong><small data-i18n="preserveHelp">Apply one gain to the whole group, retaining the original balance.</small></span>
           </label>
           <label class="radio-choice">
-            <input type="radio" name="mode" value="convert" />
-            <span><strong data-i18n="convert">Keep levels where safe</strong><small data-i18n="convertHelp">Only lower and re-encode a track if its encoded MP3 exceeds the safety ceiling.</small></span>
+            <input type="radio" name="mode" value="original" />
+            <span><strong data-i18n="original">Do not normalize</strong><small data-i18n="originalHelp">Keep each track’s original level.</small></span>
           </label>
         </fieldset>
+        <label id="apply-preview-gain-option" class="checkbox toggle-option"><input id="apply-preview-gain" type="checkbox" name="applyPreviewGain" /> <span data-i18n="applyPreviewGain">Apply preview volume to export</span><small data-i18n="applyPreviewGainHelp">Requires loaded waveforms.</small></label>
+        <label id="enforce-safety-option" class="checkbox toggle-option"><input id="enforce-safety" type="checkbox" name="enforceSafety" checked /> <span data-i18n="enforceSafety">Keep output below the safety ceiling</span></label>
 
         <div class="grid">
           <label>

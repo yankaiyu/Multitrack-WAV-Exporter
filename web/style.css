@@ -73,6 +73,10 @@ legend { padding: 0 10px 0 0; }
 .notice { border-left: 3px solid var(--warn); margin: 24px 0; padding: 2px 0 2px 12px; font-size: 14px; }
 .checkbox { display: block; margin: 0 0 20px; color: var(--muted); }
 .checkbox input { accent-color: var(--accent); margin-right: 7px; }
+.toggle-option { align-items: center; display: flex; flex-wrap: nowrap; gap: 8px; }
+.toggle-option input { flex: 0 0 auto; margin: 0; }
+.toggle-option span { display: inline; margin: 0; }
+.toggle-option small { display: inline; margin: 0 0 0 4px; }
 #package-zip-option, #split-stereo-option, #individual-trim-option, #auto-deselect-silent-option { align-items: center; display: flex; gap: 8px; }
 #package-zip-option input, #split-stereo-option input, #individual-trim-option input, #auto-deselect-silent-option input { margin: 0; }
 #package-zip-option span, #split-stereo-option span, #individual-trim-option span, #auto-deselect-silent-option span { display: inline; margin: 0; }
@@ -115,6 +119,7 @@ legend { padding: 0 10px 0 0; }
 #preview-limiter-option input { margin: 0; }
 #preview-limiter-option span { margin: 0; }
 #preview-limiter-option small { display: inline; margin: 0 0 0 4px; }
+#apply-preview-gain-option:has(input:disabled), #enforce-safety-option:has(input:disabled) { opacity: .45; }
 .track-preview-button.is-playing { background: var(--accent); color: var(--accent-ink); }
 .track-trim-controls { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; padding: 5px 8px 8px; }
 .track-trim-controls.hidden { display: none; }

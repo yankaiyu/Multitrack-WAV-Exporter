@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import math
 import mimetypes
 import os
 import re
@@ -329,6 +330,12 @@ def _convert_job(job_id: str, options: dict) -> None:
             if not files:
                 raise ValueError(localized(job_language(job_id), "selectAtLeastOneTrack"))
         mode = options["mode"]
+        if mode not in {"per_track", "preserve", "convert", "original"}:
+            raise ValueError(localized(job_language(job_id), "invalidLevelMode"))
+        apply_preview_gain = options.get("applyPreviewGain") in {True, "on", "true", "1"}
+        enforce_safety = options.get("enforceSafety", True) in {True, "on", "true", "1"}
+        if mode == "convert":
+            enforce_safety = True
         output_format = options.get("outputFormat", "mp3")
         if output_format not in OUTPUT_FORMATS:
             raise ValueError(localized(job_language(job_id), "invalidOutputFormat"))
@@ -350,6 +357,9 @@ def _convert_job(job_id: str, options: dict) -> None:
             raise ValueError(localized(job_language(job_id), "invalidTrackTrims"))
         if trim_start < 0 or (trim_end is not None and trim_end <= trim_start):
             raise ValueError(localized(job_language(job_id), "trimEndMustFollowStart"))
+        preview_gains = options.get("previewGains") or {}
+        if not isinstance(preview_gains, dict):
+            raise ValueError(localized(job_language(job_id), "invalidPreviewGains"))
         output = source / "normalized_audio"
         output.mkdir(exist_ok=True)
         output_extension = OUTPUT_FORMATS[output_format]["extension"]
@@ -412,6 +422,34 @@ def _convert_job(job_id: str, options: dict) -> None:
                         raise RuntimeError(localized(job_language(job_id), "couldNotMeetCeiling", file=file.name))
                     mark_encoded(file)
                 parallel_map(active, workers, convert_safely)
+            elif mode == "original" and active:
+                gains = {}
+                for file in active:
+                    try:
+                        value = float(preview_gains.get(file.name, 0)) if apply_preview_gain else 0.0
+                    except (TypeError, ValueError):
+                        raise ValueError(localized(job_language(job_id), "invalidPreviewGains"))
+                    if not math.isfinite(value):
+                        raise ValueError(localized(job_language(job_id), "invalidPreviewGains"))
+                    gains[file] = value
+                if not enforce_safety:
+                    append_localized_log(job_id, "originalLevelsNoSafety")
+                for _ in range(3 if enforce_safety else 1):
+                    def encode_original(file: Path) -> None:
+                        encode_audio(job_id, ffmpeg, cleaned[file], output_files[file], output_format, bitrate, wav_depth, sample_rate, gains[file])
+                        mark_encoded(file)
+                    parallel_map(active, workers, encode_original)
+                    if not enforce_safety:
+                        break
+                    measured = dict(parallel_map(active, workers, lambda file: (file, peak_of_audio(output_files[file]))))
+                    overs = {file: peak - ceiling for file, peak in measured.items() if peak is not None and peak > ceiling}
+                    if not overs:
+                        break
+                    completed = max(0, completed - len(active))
+                    for file, amount in overs.items():
+                        gains[file] -= amount + 0.2
+                else:
+                    raise RuntimeError(localized(job_language(job_id), "couldNotMeetCeilingAfterRetries"))
             elif active:
                 # Peak scanners can mis-handle NaN-bearing float WAVs.
                 # Measure the cleaned PCM with FFmpeg itself and apply a deterministic linear gain.
@@ -424,8 +462,17 @@ def _convert_job(job_id: str, options: dict) -> None:
                     gains = {file: common_gain for file in active}
                 else:
                     gains = {file: target - input_peaks[file] for file in active}
+                if apply_preview_gain:
+                    for file in active:
+                        try:
+                            preview_gain = float(preview_gains.get(file.name, 0))
+                        except (TypeError, ValueError):
+                            raise ValueError(localized(job_language(job_id), "invalidPreviewGains"))
+                        if not math.isfinite(preview_gain):
+                            raise ValueError(localized(job_language(job_id), "invalidPreviewGains"))
+                        gains[file] += preview_gain
                 append_localized_log(job_id, "normalizationGains", gains=", ".join(f"{file.name} {gain:+.2f} dB" for file, gain in gains.items()))
-                for _ in range(3):
+                for _ in range(3 if enforce_safety else 1):
                     def encode_normalized(file: Path) -> None:
                         encode_audio(job_id, ffmpeg, cleaned[file], output_files[file], output_format, bitrate, wav_depth, sample_rate, gains[file])
                         mark_encoded(file)
@@ -433,7 +480,7 @@ def _convert_job(job_id: str, options: dict) -> None:
                     measured = dict(parallel_map(active, workers, lambda file: (file, peak_of_audio(output_files[file]))))
                     overs = {file: peak - ceiling for file, peak in measured.items() if peak is not None and peak > ceiling}
                     append_localized_log(job_id, "encodedPeaks", peaks=", ".join(f"{file.name} {peak:.2f} dBFS" for file, peak in measured.items() if peak is not None))
-                    if not overs:
+                    if not enforce_safety or not overs:
                         break
                     # A safety retry re-encodes selected tracks; do not advance the
                     # track counter again, but keep the UI in the encoding phase.
@@ -451,10 +498,11 @@ def _convert_job(job_id: str, options: dict) -> None:
         # Final report is intentionally based on generated files rather than sources.
         set_localized_progress(job_id, 90, "verifyingFinalPeaks")
         final_peaks = {p.name: peak_of_audio(output_files[p]) for p in files}
-        failed = [name for name, peak in final_peaks.items() if peak is not None and peak > ceiling]
-        if failed:
-            raise RuntimeError(localized(job_language(job_id), "finalPeakVerificationFailed", files=", ".join(failed)))
-        append_localized_log(job_id, "finalPeakVerificationPassed")
+        if enforce_safety:
+            failed = [name for name, peak in final_peaks.items() if peak is not None and peak > ceiling]
+            if failed:
+                raise RuntimeError(localized(job_language(job_id), "finalPeakVerificationFailed", files=", ".join(failed)))
+            append_localized_log(job_id, "finalPeakVerificationPassed")
         zip_path = None
         if options.get("packageZip"):
             set_localized_progress(job_id, 96, "creatingZip")

@@ -12,6 +12,8 @@
 - Locale files are discovered automatically, so a new complete JSON locale adds a UI language.
 - Optional stereo-to-independent-mono splitting with separate waveform preview, trim, and export for left/right channels.
 - Per-track preview volume from −60 dB to +12 dB and an optional playback limiter for safer 32-bit float auditioning. The limiter is enabled on first launch and remembers the last choice.
+- Original-level export mode skips normalization and can apply each track’s preview volume gain.
+- Replaced the standalone safe-level mode with independent toggles for applying preview gains and enforcing the safety ceiling.
 - Added −0.1 dBFS and −0.3 dBFS final output safety-ceiling options for WAV, MP3, and M4A exports.
 
 ### Safety and behavior
@@ -35,6 +37,8 @@
 - 支持 ZIP 分享包、任务进度和单任务内轨道并发设置。
 - 提供英文、简体中文、繁体中文、日文、西班牙语、法语与韩文界面。
 - 支持每轨 −60 dB 至 +12 dB 的试听音量，以及可选试听限幅器，方便安全试听 32-bit float 音频。首次打开时默认开启，并记住上次选择。
+- 增加“不做标准化”导出模式：跳过标准化，并可将每轨试听增益应用到导出文件。
+- 将单独的安全音量模式改为两个独立选项：是否应用试听增益，以及是否确保通过安全峰值检测。
 - 增加 −0.1 dBFS 和 −0.3 dBFS 最终输出安全峰值选项，适用于 WAV、MP3 和 M4A 导出。
 
 ### 安全与行为

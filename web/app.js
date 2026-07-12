@@ -74,6 +74,7 @@ function resetWaveformState() {
   $("#trim-end-range").value = "0";
   $("#trim-fill").style.left = "0%";
   $("#trim-fill").style.width = "0%";
+  updateLevelOptions();
 }
 
 function updateOutputFormat() {
@@ -81,6 +82,19 @@ function updateOutputFormat() {
   $("#bitrate-field").classList.toggle("hidden", format === "wav");
   $("#wav-depth-field").classList.toggle("hidden", format !== "wav");
   $("#bitrate-label").textContent = t(format === "m4a" ? "aacBitrate" : "bitrate");
+}
+
+function updateLevelOptions() {
+  const mode = document.querySelector("input[name=mode]:checked")?.value;
+  const safety = $("#enforce-safety");
+  const previewGain = $("#apply-preview-gain");
+  if (!safety || !previewGain) return;
+  const safetyLocked = mode === "per_track";
+  safety.disabled = safetyLocked;
+  if (safetyLocked) safety.checked = true;
+  const previewGainAllowed = mode === "original" && waveformTracks.length > 0;
+  previewGain.disabled = !previewGainAllowed;
+  if (!previewGainAllowed) previewGain.checked = false;
 }
 
 function syncTrim(changed = "") {
@@ -392,6 +406,7 @@ function renderWaveforms(preview) {
   $("#trim-controls").classList.remove("hidden");
   $("#trim-controls").classList.add("has-preview-volume");
   $("#preview-volume-heading").classList.remove("hidden");
+  updateLevelOptions();
   $("#select-all").classList.remove("hidden");
   $("#select-none").classList.remove("hidden");
   $("#trim-end").value = waveformDuration.toFixed(3);
@@ -458,6 +473,8 @@ $("#convert-form").addEventListener("submit", async (event) => {
   const form = new FormData(event.currentTarget);
   const payload = Object.fromEntries(form);
   payload.language = currentLanguage();
+  payload.enforceSafety = $("#enforce-safety").checked;
+  payload.applyPreviewGain = $("#apply-preview-gain").checked;
   const selectionControls = document.querySelectorAll("input[name=selectedFiles]");
   if (selectionControls.length) payload.selectedFiles = [...selectionControls].filter((item) => item.checked).map((item) => item.value);
   if ($("#individual-trim").checked) {
@@ -465,6 +482,12 @@ $("#convert-form").addEventListener("submit", async (event) => {
       start: row.querySelector(".track-trim-start").value,
       end: row.querySelector(".track-trim-end").value,
     }]));
+  }
+  const previewGains = document.querySelectorAll(".wave-track");
+  if (previewGains.length) {
+    payload.previewGains = Object.fromEntries([...previewGains].map((row) => [
+      decodeURIComponent(row.dataset.track), row.querySelector(".track-preview-volume input[type=range]")?.value || "0",
+    ]));
   }
   try {
     const result = await api("/api/convert", { method: "POST", body: JSON.stringify(payload) });
@@ -516,6 +539,7 @@ $("#trim-end").addEventListener("input", () => syncTrim("end"));
 $("#trim-start-range").addEventListener("input", (event) => { $("#trim-start").value = event.target.value; syncTrim("start"); });
 $("#trim-end-range").addEventListener("input", (event) => { $("#trim-end").value = event.target.value; syncTrim("end"); });
 $("#individual-trim").addEventListener("change", updateIndividualTrimMode);
+document.querySelectorAll("input[name=mode]").forEach((input) => input.addEventListener("change", updateLevelOptions));
 $("#auto-deselect-silent").addEventListener("change", autoDeselectSilentTracks);
 document.querySelector("select[name=silenceThreshold]").addEventListener("change", autoDeselectSilentTracks);
 $("#waveforms").addEventListener("input", (event) => {
@@ -631,3 +655,4 @@ splitStereoCheckbox.addEventListener("change", () => {
 initializeLanguage().catch((error) => {
   $("#dependency-status").textContent = `Unable to load interface language: ${error.message}`;
 });
+updateLevelOptions();

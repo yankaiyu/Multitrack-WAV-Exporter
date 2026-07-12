@@ -156,6 +156,27 @@ class FloatAudioPipelineTests(unittest.TestCase):
                                 "-of", "default=nokey=1:noprint_wrappers=1", str(output)], capture_output=True, text=True, check=True)
         self.assertEqual(codec.stdout.strip(), "pcm_s24le")
 
+    def test_original_mode_applies_preview_gain_without_normalizing(self) -> None:
+        source = self.root / "original-levels"
+        source.mkdir()
+        wav = source / "track.wav"
+        write_float_wav(wav, [0.25] * 4_800)
+        server.convert_job(self.job_id, {
+            "source": str(source), "mode": "original", "outputFormat": "wav", "wavDepth": "float32",
+            "bitrate": "256", "sampleRate": "", "ceiling": "-2", "silenceThreshold": "-40", "workers": "1",
+            "previewGains": {wav.name: "6"}, "applyPreviewGain": "on",
+        })
+        output = source / "normalized_audio" / "track.wav"
+        self.assertEqual(server.JOBS[self.job_id]["status"], "done", server.JOBS[self.job_id]["log"])
+        self.assertAlmostEqual(server.peak_of_audio(output), -6.04, places=1)
+        server.convert_job(self.job_id, {
+            "source": str(source), "mode": "original", "outputFormat": "wav", "wavDepth": "float32",
+            "bitrate": "256", "sampleRate": "", "ceiling": "-2", "silenceThreshold": "-40", "workers": "1",
+            "previewGains": {wav.name: "20"}, "applyPreviewGain": "on", "enforceSafety": "off",
+        })
+        self.assertEqual(server.JOBS[self.job_id]["status"], "done", server.JOBS[self.job_id]["log"])
+        self.assertGreater(server.peak_of_audio(output), -2.0)
+
     def test_m4a_output_is_safe(self) -> None:
         source = self.root / "m4a-output"
         source.mkdir()
