@@ -11,6 +11,8 @@
 - English, Simplified Chinese, Traditional Chinese, Japanese, Spanish, French, and Korean interface.
 - Locale files are discovered automatically, so a new complete JSON locale adds a UI language.
 - Optional stereo-to-independent-mono splitting with separate waveform preview, trim, and export for left/right channels.
+- Per-track preview volume from −60 dB to +12 dB and an optional playback limiter for safer 32-bit float auditioning. The limiter is enabled on first launch and remembers the last choice.
+- Added −0.1 dBFS and −0.3 dBFS final output safety-ceiling options for WAV, MP3, and M4A exports.
 
 ### Safety and behavior
 
@@ -32,6 +34,8 @@
 - 支持波形预览、直接拖动波形标记进行裁剪、轨道选择和只选择有声轨道。
 - 支持 ZIP 分享包、任务进度和单任务内轨道并发设置。
 - 提供英文、简体中文、繁体中文、日文、西班牙语、法语与韩文界面。
+- 支持每轨 −60 dB 至 +12 dB 的试听音量，以及可选试听限幅器，方便安全试听 32-bit float 音频。首次打开时默认开启，并记住上次选择。
+- 增加 −0.1 dBFS 和 −0.3 dBFS 最终输出安全峰值选项，适用于 WAV、MP3 和 M4A 导出。
 
 ### 安全与行为
 

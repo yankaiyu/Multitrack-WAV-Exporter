@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import re
 import struct
 import subprocess
 import tempfile
@@ -45,6 +46,19 @@ class LocaleTests(unittest.TestCase):
         self.assertIn("FFmpeg", server.localized("en", "missingFfmpeg"))
         self.assertIn("プリフェーダー", server.localized("ja", "perTrackHelp"))
         self.assertIn("音声ファイル", server.localized("ja", "convertingFiles", count=1, output="out"))
+
+    def test_all_frontend_translation_keys_have_locale_fallbacks(self) -> None:
+        """Every literal UI key used by HTML/JS must resolve in every locale."""
+        key_pattern = re.compile(r'data-i18n(?:-html)?="([^"]+)"|\bt\("([^"]+)"\)')
+        used: set[str] = set()
+        for path in [server.WEB_ROOT / "index.html", *sorted(server.WEB_ROOT.glob("*.js"))]:
+            text = path.read_text(encoding="utf-8")
+            used.update(match.group(1) or match.group(2) for match in key_pattern.finditer(text))
+        self.assertTrue(used)
+        for locale in server.available_locales():
+            strings = server.load_locale(locale["code"])
+            missing = sorted(key for key in used if not isinstance(strings.get(key), str) or not strings[key].strip())
+            self.assertEqual(missing, [], f"{locale['code']} has no translation/fallback for: {missing}")
 
 @unittest.skipUnless(server.tool_path("ffmpeg") and server.tool_path("ffprobe"), "FFmpeg and FFprobe are required")
 class FloatAudioPipelineTests(unittest.TestCase):
