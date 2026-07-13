@@ -44,6 +44,8 @@
     "linkedPlayheads": "🔗 Têtes liées",
     "independentPlayheads": "↔ Têtes indépendantes",
     "previewPause": "⏸ Pause",
+    "collapseTrack": "−",
+    "expandTrack": "+",
     "previewVolume": "Volume d’aperçu",
     "previewLimiter": "🛡️ Limiteur sécurisé d’aperçu",
     "previewLimiterHelp": "Agit uniquement sur la lecture, pas sur les fichiers exportés.",

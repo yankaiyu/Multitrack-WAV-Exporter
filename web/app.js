@@ -33,6 +33,7 @@ function resetWaveformState() {
   $("#linked-playheads").checked = true;
   $("#independent-playheads").checked = false;
   $("#waveform-status").textContent = "";
+  $("#waveform-status").classList.remove("waveform-log");
   $("#trim-controls").classList.add("hidden");
   $("#trim-controls").classList.remove("has-preview-volume");
   $("#individual-trim-option").classList.add("hidden");
@@ -445,7 +446,7 @@ function renderWaveforms(preview) {
     const trackId = encodeURIComponent(track.name);
     const displayDuration = displayTimeLimit(track.duration);
   const channelGuide = track.stereo ? `<div class="stereo-channel-guide" aria-hidden="true"><span class="stereo-channel-label stereo-channel-label-left">L</span><span class="stereo-channel-label stereo-channel-label-right">R</span><span class="stereo-channel-divider"></span></div>` : "";
-    return `<div class="wave-track" data-track="${trackId}" data-duration="${track.duration}"><label class="wave-name track-select"><input type="checkbox" name="selectedFiles" value="${track.name}" checked />${track.name}</label><button class="track-preview-button secondary" type="button">${t("previewPlay")}</button><audio class="track-preview-audio" preload="metadata" src="${track.audio}"></audio><div class="track-trim-controls hidden"><label>${t("trackStart")}<input class="track-trim-start" type="number" min="0" max="${displayDuration}" step="0.001" value="0" /></label><label>${t("trackEnd")}<input class="track-trim-end" type="number" min="0" max="${displayDuration}" step="0.001" value="${track.duration.toFixed(3)}" /></label><div class="track-range-controls"><div class="track-range-rail"></div><div class="track-range-fill"></div><input class="track-trim-start-range" type="range" min="0" max="${displayDuration}" step="0.001" value="0" /><input class="track-trim-end-range" type="range" min="0" max="${displayDuration}" step="0.001" value="${track.duration.toFixed(3)}" /></div></div><div class="wave-image-wrap"><img class="wave-image" src="${track.image}" alt="${track.name}" />${channelGuide}</div><div class="trim-range-overlay" data-duration="${track.duration}"><span class="playback-marker hidden" aria-hidden="true"></span><span class="trim-marker trim-marker-start" data-marker="start" aria-label="Trim start"></span><span class="trim-marker trim-marker-end" data-marker="end" aria-label="Trim end"></span></div></div>`;
+    return `<div class="wave-track" data-track="${trackId}" data-duration="${track.duration}"><label class="wave-name track-select"><input type="checkbox" name="selectedFiles" value="${track.name}" checked />${track.name}</label><button class="track-collapse-button secondary" type="button" aria-expanded="true" title="${t("collapseTrack")}">${t("collapseTrack")}</button><button class="track-preview-button secondary" type="button">${t("previewPlay")}</button><audio class="track-preview-audio" preload="metadata" src="${track.audio}"></audio><div class="track-trim-controls hidden"><label>${t("trackStart")}<input class="track-trim-start" type="number" min="0" max="${displayDuration}" step="0.001" value="0" /></label><label>${t("trackEnd")}<input class="track-trim-end" type="number" min="0" max="${displayDuration}" step="0.001" value="${track.duration.toFixed(3)}" /></label><div class="track-range-controls"><div class="track-range-rail"></div><div class="track-range-fill"></div><input class="track-trim-start-range" type="range" min="0" max="${displayDuration}" step="0.001" value="0" /><input class="track-trim-end-range" type="range" min="0" max="${displayDuration}" step="0.001" value="${track.duration.toFixed(3)}" /></div></div><div class="wave-image-wrap"><img class="wave-image" src="${track.image}" alt="${track.name}" />${channelGuide}</div><div class="trim-range-overlay" data-duration="${track.duration}"><span class="playback-marker hidden" aria-hidden="true"></span><span class="trim-marker trim-marker-start" data-marker="start" aria-label="Trim start"></span><span class="trim-marker trim-marker-end" data-marker="end" aria-label="Trim end"></span></div></div>`;
   }).join("");
   document.querySelectorAll(".wave-track").forEach((row) => {
     const volume = document.createElement("label");
@@ -472,6 +473,7 @@ function renderWaveforms(preview) {
   $("#unified-trim").checked = !uneven;
   updateIndividualTrimMode();
   $("#waveform-status").textContent = t("waveformsReady");
+  $("#waveform-status").classList.remove("waveform-log");
   syncTrim();
   document.querySelectorAll(".track-preview-audio").forEach((audio) => {
     const row = audio.closest(".wave-track");
@@ -529,6 +531,7 @@ function pollWaveforms(job) {
   const timer = setInterval(async () => {
     const data = await api(`/api/job/${job}`);
     $("#waveform-status").textContent = data.log || t("loadingWaveforms");
+    $("#waveform-status").scrollTop = $("#waveform-status").scrollHeight;
     if (data.status !== "running") {
       clearInterval(timer);
       $("#load-waveforms").disabled = false;
@@ -601,6 +604,7 @@ $("#load-waveforms").addEventListener("click", async () => {
   if (!source) { alert(t("chooseSourceFirst")); return; }
   $("#load-waveforms").disabled = true;
   $("#waveform-status").textContent = t("loadingWaveforms");
+  $("#waveform-status").classList.add("waveform-log");
   $("#waveforms").innerHTML = "";
   try { pollWaveforms((await api("/api/waveforms", { method:"POST", body:JSON.stringify({source, language:currentLanguage(), splitStereo: $("#split-stereo").checked}) })).job); }
   catch (error) { $("#load-waveforms").disabled = false; $("#waveform-status").textContent = error.message; }
@@ -625,6 +629,15 @@ $("#waveforms").addEventListener("input", (event) => {
   if (event.target.matches(".track-trim-start-range")) row.querySelector(".track-trim-start").value = event.target.value;
   if (event.target.matches(".track-trim-end-range")) row.querySelector(".track-trim-end").value = event.target.value;
   if (event.target.matches(".track-trim-start, .track-trim-end, .track-trim-start-range, .track-trim-end-range")) syncIndividualTrim(row);
+});
+$("#waveforms").addEventListener("click", (event) => {
+  const button = event.target.closest(".track-collapse-button");
+  if (!button) return;
+  const row = button.closest(".wave-track");
+  const collapsed = row.classList.toggle("track-collapsed");
+  button.setAttribute("aria-expanded", String(!collapsed));
+  button.title = t(collapsed ? "expandTrack" : "collapseTrack");
+  button.textContent = t(collapsed ? "expandTrack" : "collapseTrack");
 });
 $("#waveforms").addEventListener("click", (event) => {
   const button = event.target.closest(".track-preview-button");
@@ -722,6 +735,11 @@ $("#language-select").addEventListener("change", async (event) => {
 document.addEventListener("languagechange", () => {
   updateOutputFormat();
   syncAllPreviewButton();
+  document.querySelectorAll(".track-collapse-button").forEach((button) => {
+    const collapsed = button.closest(".wave-track")?.classList.contains("track-collapsed");
+    button.title = t(collapsed ? "expandTrack" : "collapseTrack");
+    button.textContent = t(collapsed ? "expandTrack" : "collapseTrack");
+  });
   refreshStatus().catch((error) => { $("#dependency-status").textContent = `${t("unable")}${error.message}`; });
 });
 

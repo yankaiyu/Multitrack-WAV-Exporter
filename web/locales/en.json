@@ -82,6 +82,8 @@
   "linkedPlayheads": "🔗 Linked playheads",
   "independentPlayheads": "↔ Independent playheads",
   "previewPause": "⏸ Pause",
+  "collapseTrack": "−",
+  "expandTrack": "+",
   "previewUnavailable": "This file cannot be previewed in this browser.",
   "previewVolume": "Preview volume",
   "previewLimiter": "🛡️ Safe preview limiter",

@@ -44,6 +44,8 @@
     "linkedPlayheads": "🔗 재생 헤드 연동",
     "independentPlayheads": "↔ 재생 헤드 독립",
     "previewPause": "⏸ 일시정지",
+    "collapseTrack": "−",
+    "expandTrack": "+",
     "previewVolume": "미리듣기 볼륨",
     "previewLimiter": "🛡️ 미리듣기 안전 리미터",
     "previewLimiterHelp": "재생에만 적용되며 내보낸 파일은 변경하지 않습니다.",

@@ -95,6 +95,7 @@ legend { padding: 0 10px 0 0; }
 .trim-section { border-top: 1px solid var(--line); margin: 24px 0; padding-top: 22px; }
 .section-heading { display: flex; gap: 16px; justify-content: space-between; align-items: flex-start; }
 .section-heading p, .trim-status { color: var(--muted); font-size: 14px; margin: 3px 0 0; }
+.trim-status.waveform-log { background: #0d1213; border-radius: 9px; font: 12px/1.5 ui-monospace, SFMono-Regular, monospace; max-height: 120px; overflow: auto; padding: 10px 12px; white-space: pre-wrap; }
 .trim-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
 .trim-controls label { min-width: 0; }
 .trim-controls.is-disabled { opacity: .45; }
@@ -109,10 +110,11 @@ legend { padding: 0 10px 0 0; }
 .range-controls input::-moz-range-thumb { background: var(--accent); border: 2px solid #effbd0; border-radius: 50%; height: 14px; pointer-events: auto; width: 14px; }
 .waveforms { display: grid; gap: 9px; }
 .wave-track { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; position: relative; background: #0d1213; }
-.wave-name { color: var(--muted); font: 12px ui-monospace, SFMono-Regular, monospace; padding: 5px 132px 0 8px; }
+.wave-name { color: var(--muted); font: 12px ui-monospace, SFMono-Regular, monospace; min-height: 34px; padding: 7px 145px 7px 8px; }
 .track-select { color: var(--text); display: flex; gap: 7px; align-items: center; cursor: pointer; }
 .track-select input { accent-color: var(--accent); }
 .track-preview-button { font-size: 12px; padding: 5px 8px; position: absolute; right: 60px; top: 4px; z-index: 3; }
+.track-collapse-button { font-size: 12px; padding: 5px 8px; position: absolute; right: 122px; top: 4px; z-index: 3; }
 .track-preview-volume { align-items: center; background: #0d1213; border-left: 1px solid var(--line); color: var(--muted); display: flex; flex: 0 0 52px; flex-direction: column; font-size: 9px; gap: 1px; height: 100px; justify-content: center; overflow: hidden; padding: 2px 4px; }
 .track-preview-volume-icon { font-size: 14px; line-height: 1; margin: 0; }
 .track-preview-volume input[type=range] { accent-color: var(--accent); height: 58px; width: 16px; writing-mode: vertical-lr; direction: rtl; }
@@ -162,6 +164,8 @@ legend { padding: 0 10px 0 0; }
 .wave-track.is-deselected .wave-image { filter: grayscale(1); opacity: .16; }
 .wave-track.is-deselected .trim-range-overlay { opacity: .12; }
 .wave-track.is-deselected .track-trim-controls, .wave-track.is-deselected .track-preview-button { opacity: .3; }
+.wave-track.track-collapsed .track-trim-controls, .wave-track.track-collapsed .wave-image-wrap, .wave-track.track-collapsed .trim-range-overlay { display: none; }
+.wave-track.track-collapsed { min-height: 34px; }
 .wave-track.is-deselected input:disabled { cursor: not-allowed; }
 
 /* Job progress */

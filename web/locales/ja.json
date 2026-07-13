@@ -44,6 +44,8 @@
     "linkedPlayheads": "🔗 再生ヘッドを連動",
     "independentPlayheads": "↔ 再生ヘッドを個別に操作",
     "previewPause": "⏸ 一時停止",
+    "collapseTrack": "−",
+    "expandTrack": "+",
     "previewVolume": "プレビュー音量",
     "previewLimiter": "🛡️ プレビュー安全リミッター",
     "previewLimiterHelp": "再生にのみ適用され、書き出しファイルは変わりません。",

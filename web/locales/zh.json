@@ -82,6 +82,8 @@
   "linkedPlayheads": "🔗 联动播放头",
   "independentPlayheads": "↔ 独立播放头",
   "previewPause": "⏸ 暂停",
+  "collapseTrack": "−",
+  "expandTrack": "+",
   "previewUnavailable": "此文件无法在当前浏览器中试听。",
   "previewVolume": "试听音量",
   "previewLimiter": "🛡️ 试听安全限幅器",

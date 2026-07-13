@@ -45,6 +45,8 @@
     "linkedPlayheads": "🔗 聯動播放頭",
     "independentPlayheads": "↔ 獨立播放頭",
     "previewPause": "⏸ 暫停",
+    "collapseTrack": "−",
+    "expandTrack": "+",
     "previewVolume": "試聽音量",
     "previewLimiter": "🛡️ 試聽安全限幅器",
     "previewLimiterHelp": "僅影響試聽，不會改變匯出檔案。",
