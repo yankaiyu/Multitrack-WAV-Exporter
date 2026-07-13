@@ -382,6 +382,7 @@ function syncAllPreviewButton() {
   if (!button) return;
   const playing = allPreviewPlaying && previewRows().some((row) => !row.querySelector(".track-preview-audio").paused);
   button.textContent = t(playing ? "previewPauseAll" : "previewPlayAll");
+  button.classList.toggle("is-playing", playing);
   button.dataset.playing = String(playing);
 }
 

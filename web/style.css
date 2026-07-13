@@ -130,7 +130,7 @@ legend { padding: 0 10px 0 0; }
 #preview-limiter-option span { margin: 0; }
 #preview-limiter-option small { display: inline; margin: 0 0 0 4px; }
 #apply-preview-gain-option:has(input:disabled), #enforce-safety-option:has(input:disabled) { opacity: .45; }
-.track-preview-button.is-playing { background: var(--accent); color: var(--accent-ink); }
+.track-preview-button.is-playing, .preview-group-actions button.is-playing { background: var(--accent); color: var(--accent-ink); }
 .track-trim-controls { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; padding: 5px 8px 8px; }
 .track-trim-controls.hidden { display: none; }
 .track-trim-controls label { color: var(--muted); font-size: 12px; min-width: 0; }
