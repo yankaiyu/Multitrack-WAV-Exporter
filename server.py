@@ -29,6 +29,8 @@ LOCALES_ROOT = WEB_ROOT / "locales"
 SCRIPTS = ROOT / "scripts"
 JOBS: dict[str, dict] = {}
 JOBS_LOCK = threading.Lock()
+JOB_PROCESSES: dict[str, set[subprocess.Popen]] = {}
+JOB_PROCESSES_LOCK = threading.Lock()
 WAVEFORM_FILES: dict[str, Path] = {}
 AUDIO_FILES: dict[str, Path] = {}
 WAVEFORM_RENDER_VERSION = "v2"
@@ -103,6 +105,23 @@ def set_progress(job_id: str, value: int, label: str) -> None:
             job["progressLabel"] = label
 
 
+class JobCancelled(Exception):
+    """Raised when the user aborts a running task."""
+
+
+def job_cancelled(job_id: str) -> bool:
+    with JOBS_LOCK:
+        return bool(JOBS.get(job_id, {}).get("cancel_requested"))
+
+
+def cancel_job_processes(job_id: str) -> None:
+    with JOB_PROCESSES_LOCK:
+        processes = list(JOB_PROCESSES.get(job_id, set()))
+    for process in processes:
+        if process.poll() is None:
+            process.terminate()
+
+
 def source_lock(source: Path) -> threading.Lock:
     """Return a stable lock so two browser tasks cannot write one output folder."""
     key = str(source.resolve())
@@ -111,6 +130,8 @@ def source_lock(source: Path) -> threading.Lock:
 
 
 def run_process(job_id: str, command: list[str], cwd: Path | None = None) -> int:
+    if job_cancelled(job_id):
+        raise JobCancelled()
     env = os.environ.copy()
     env["PATH"] = ":".join([str(Path.home() / ".local/bin"), *(str(folder) for folder in MAC_BIN_DIRS), env.get("PATH", "")])
     try:
@@ -118,11 +139,23 @@ def run_process(job_id: str, command: list[str], cwd: Path | None = None) -> int
                                    text=True, bufsize=1, env=env)
     except FileNotFoundError as error:
         raise RuntimeError(localized(job_language(job_id), "couldNotStartProgram", program=command[0] if command else "?")) from error
+    with JOB_PROCESSES_LOCK:
+        JOB_PROCESSES.setdefault(job_id, set()).add(process)
     assert process.stdout
-    with process.stdout:
-        for line in process.stdout:
-            append_log(job_id, line)
-    return process.wait()
+    try:
+        with process.stdout:
+            for line in process.stdout:
+                append_log(job_id, line)
+                if job_cancelled(job_id):
+                    process.terminate()
+                    break
+        code = process.wait()
+        if job_cancelled(job_id):
+            raise JobCancelled()
+        return code
+    finally:
+        with JOB_PROCESSES_LOCK:
+            JOB_PROCESSES.get(job_id, set()).discard(process)
 
 
 def audio_channel_count(path: Path, language: str = "en") -> int:
@@ -270,6 +303,10 @@ def waveform_job(job_id: str, source_text: str, language: str = "zh", split_ster
             set_localized_progress(job_id, round((index + 1) / len(files) * 100), "generatingWaveforms", current=index + 1, total=len(files))
         with JOBS_LOCK:
             JOBS[job_id].update(status="done", preview=previews)
+    except JobCancelled:
+        append_localized_log(job_id, "cancelled")
+        with JOBS_LOCK:
+            JOBS[job_id]["status"] = "cancelled"
     except Exception as error:
         append_localized_log(job_id, "errorLog", error=error)
         with JOBS_LOCK:
@@ -301,7 +338,12 @@ def convert_job(job_id: str, options: dict) -> None:
         return
     if not lock.acquire(blocking=False):
         append_localized_log(job_id, "waitingForSourceLock")
-        lock.acquire()
+        while not lock.acquire(timeout=0.2):
+            if job_cancelled(job_id):
+                append_localized_log(job_id, "cancelled")
+                with JOBS_LOCK:
+                    JOBS[job_id]["status"] = "cancelled"
+                return
     try:
         _convert_job(job_id, options)
     finally:
@@ -522,6 +564,12 @@ def _convert_job(job_id: str, options: dict) -> None:
             split_workspace.cleanup()
         with JOBS_LOCK:
             JOBS[job_id].update(status="done", output=str(output), zip=zip_path, progress=100, progressLabel=done_label)
+    except JobCancelled:
+        if split_workspace:
+            split_workspace.cleanup()
+        append_localized_log(job_id, "cancelled")
+        with JOBS_LOCK:
+            JOBS[job_id]["status"] = "cancelled"
     except Exception as error:
         if split_workspace:
             split_workspace.cleanup()
@@ -646,14 +694,14 @@ class Handler(SimpleHTTPRequestHandler):
             if self.path == "/api/convert":
                 job_id = uuid.uuid4().hex
                 with JOBS_LOCK:
-                    JOBS[job_id] = {"status": "running", "log": "", "output": None, "progress": 0,
+                    JOBS[job_id] = {"status": "running", "cancel_requested": False, "log": "", "output": None, "progress": 0,
                                     "progressLabel": localized(data.get("language"), "waitingToStart"), "language": data.get("language", "en")}
                 threading.Thread(target=convert_job, args=(job_id, data), daemon=True).start()
                 self.json_response({"job": job_id})
             elif self.path == "/api/waveforms":
                 job_id = uuid.uuid4().hex
                 with JOBS_LOCK:
-                    JOBS[job_id] = {"status": "running", "log": "", "output": None, "preview": None, "progress": 0,
+                    JOBS[job_id] = {"status": "running", "cancel_requested": False, "log": "", "output": None, "preview": None, "progress": 0,
                                     "progressLabel": localized(data.get("language"), "waitingToStart"), "language": data.get("language", "en")}
                 threading.Thread(target=waveform_job, args=(job_id, data["source"], data.get("language", "zh"),
                                                              data.get("splitStereo") in {True, "on", "true", "1"}), daemon=True).start()
@@ -664,14 +712,30 @@ class Handler(SimpleHTTPRequestHandler):
                     raise ValueError(localized(data.get("language"), "invalidDependencyAction"))
                 job_id = uuid.uuid4().hex
                 with JOBS_LOCK:
-                    JOBS[job_id] = {"status": "running", "log": "", "output": None, "progress": 0,
+                    JOBS[job_id] = {"status": "running", "cancel_requested": False, "log": "", "output": None, "progress": 0,
                                     "progressLabel": localized(data.get("language"), "waitingToStart"), "language": data.get("language", "en")}
                 def dependencies():
-                    code = run_process(job_id, ["/bin/bash", str(SCRIPTS / f"{action}_dependencies.sh")], ROOT)
+                    try:
+                        code = run_process(job_id, ["/bin/bash", str(SCRIPTS / f"{action}_dependencies.sh")], ROOT)
+                    except JobCancelled:
+                        append_localized_log(job_id, "cancelled")
+                        with JOBS_LOCK:
+                            JOBS[job_id]["status"] = "cancelled"
+                        return
                     with JOBS_LOCK:
                         JOBS[job_id]["status"] = "done" if code == 0 else "error"
                 threading.Thread(target=dependencies, daemon=True).start()
                 self.json_response({"job": job_id})
+            elif self.path == "/api/cancel":
+                job_id = data.get("job")
+                with JOBS_LOCK:
+                    job = JOBS.get(job_id)
+                    if not job:
+                        raise ValueError(localized(data.get("language"), "jobMissing"))
+                    if job.get("status") == "running":
+                        job["cancel_requested"] = True
+                cancel_job_processes(job_id)
+                self.json_response({"cancelled": True})
             elif self.path == "/api/select-folder":
                 # This is intentionally macOS-only. The server is bound to 127.0.0.1.
                 prompt = localized(data.get("language"), "selectSourceFolderPrompt")

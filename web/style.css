@@ -72,6 +72,7 @@ legend { padding: 0 10px 0 0; }
 .speed-field { grid-column: 1 / -1; max-width: 100%; }
 .notice { border-left: 3px solid var(--warn); margin: 24px 0; padding: 2px 0 2px 12px; font-size: 14px; }
 .checkbox { display: block; margin: 0 0 20px; color: var(--muted); }
+.danger { background: #6e2630; border: 1px solid #d96b78; color: #fff; }
 .checkbox input { accent-color: var(--accent); margin-right: 7px; }
 .toggle-option { align-items: center; display: flex; flex-wrap: nowrap; gap: 8px; }
 .toggle-option input { flex: 0 0 auto; margin: 0; }

@@ -6,6 +6,7 @@ import { applyPreviewAudioSettings, PREVIEW_VOLUME_MAX, PREVIEW_VOLUME_MIN, resu
 import { displayTimeLimit, normalizeTrimRange, timeAtPointer } from "./trim-geometry.js";
 
 const ZIP_PREFERENCE_KEY = "packageZip";
+const OPEN_FINDER_PREFERENCE_KEY = "openFinderOnComplete";
 const SPLIT_STEREO_PREFERENCE_KEY = "splitStereo";
 const PREVIEW_LIMITER_PREFERENCE_KEY = "previewLimiter";
 let selectingFolder = false;
@@ -698,6 +699,10 @@ $("#open-output").addEventListener("click", async (event) => {
   try { await api("/api/open-folder", { method:"POST", body:JSON.stringify({path:event.currentTarget.dataset.path, language:currentLanguage()}) }); }
   catch (error) { alert(error.message); }
 });
+const openFinderToggle = $("#open-output-toggle");
+const savedOpenFinderPreference = localStorage.getItem(OPEN_FINDER_PREFERENCE_KEY);
+if (savedOpenFinderPreference !== null) openFinderToggle.checked = savedOpenFinderPreference === "true";
+openFinderToggle.addEventListener("change", () => localStorage.setItem(OPEN_FINDER_PREFERENCE_KEY, String(openFinderToggle.checked)));
 
 $("#install-button").addEventListener("click", async () => {
   if (!confirm(t("installConfirm"))) return;

@@ -15,6 +15,8 @@
 - Original-level export mode skips normalization and can apply each track’s preview volume gain.
 - Replaced the standalone safe-level mode with independent toggles for applying preview gains and enforcing the safety ceiling.
 - Added −0.1 dBFS and −0.3 dBFS final output safety-ceiling options for WAV, MP3, and M4A exports.
+- Added an abort button for running exports and a remembered option to open the output folder in Finder when complete.
+- Added linked or independent preview playheads, synchronized multi-track playback, and playhead reset controls.
 
 ### Safety and behavior
 
@@ -41,6 +43,8 @@
 - 将单独的安全音量模式改为两个独立选项：是否应用试听增益，以及是否确保通过安全峰值检测。
 - 明确安全峰值选项适用于所有标准化模式：关闭时仍使用所选峰值作为初始目标，仅跳过最终复检和重试。
 - 增加 −0.1 dBFS 和 −0.3 dBFS 最终输出安全峰值选项，适用于 WAV、MP3 和 M4A 导出。
+- 增加转换中的取消按钮，以及完成后自动在 Finder 中打开输出文件夹的记忆选项。
+- 增加联动或独立试听播放头、同步多轨试听和播放头重置控制。
 
 ### 安全与行为
 

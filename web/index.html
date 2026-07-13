@@ -123,6 +123,7 @@
         </div>
         <p class="notice" data-i18n="notice">Every mode checks decoded MP3 peaks. When a peak exceeds the ceiling, it re-encodes from the original WAV at a lower level to avoid clipping.</p>
         <label id="package-zip-option" class="checkbox"><input type="checkbox" name="packageZip" checked /> <span data-i18n="zip">📦 Also create a ZIP share package</span></label>
+        <label id="open-output-option" class="checkbox toggle-option"><input id="open-output-toggle" type="checkbox" checked /> <span data-i18n="openFinderOnComplete">Open output folder in Finder when done</span></label>
         <button id="convert-button" class="primary" type="submit" data-i18n="start">Start export</button>
       </form>
 
@@ -130,7 +131,7 @@
         <div class="job-heading"><h2 id="job-title" data-i18n="processing">Processing…</h2><span id="job-state" class="pill" data-i18n="running">Running</span></div>
         <div class="progress-row"><div class="progress-track"><div id="job-progress-bar" class="progress-bar"></div></div><span id="job-progress-text">0%</span></div>
         <pre id="job-log"></pre>
-        <p id="output-path"></p><button id="open-output" type="button" class="secondary hidden" data-i18n="openFinder">Open in Finder</button>
+        <p id="output-path"></p><button id="cancel-job" type="button" class="danger hidden" data-i18n="cancel">✕ Cancel export</button><button id="open-output" type="button" class="secondary hidden" data-i18n="openFinder">Open in Finder</button>
       </section>
     </main>
     <script type="module" src="app.js"></script>
