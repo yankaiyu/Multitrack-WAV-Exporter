@@ -77,6 +77,12 @@ class LocaleTests(unittest.TestCase):
         self.assertIn('if (allPreviewPlaying && $("#linked-playheads").checked)', app)
         self.assertIn("stopAllTrackPreviews();", app)
 
+    def test_linked_playhead_does_not_seek_short_media_to_eof(self) -> None:
+        app = (server.WEB_ROOT / "app.js").read_text(encoding="utf-8")
+        self.assertIn("Do not seek a shorter media element exactly to/past its duration", app)
+        self.assertIn("mediaDuration - 0.001", app)
+        self.assertIn("updatePlaybackMarkerAt(row, target)", app)
+
 @unittest.skipUnless(server.tool_path("ffmpeg") and server.tool_path("ffprobe"), "FFmpeg and FFprobe are required")
 class FloatAudioPipelineTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -193,6 +199,22 @@ class FloatAudioPipelineTests(unittest.TestCase):
         })
         self.assertEqual(server.JOBS[self.job_id]["status"], "done", server.JOBS[self.job_id]["log"])
         self.assertGreater(server.peak_of_audio(output), -2.0)
+
+    def test_original_mode_applies_preview_mute_only_when_requested(self) -> None:
+        source = self.root / "preview-mute"
+        source.mkdir()
+        wav = source / "track.wav"
+        write_float_wav(wav, [0.5] * 4_800)
+        options = {
+            "source": str(source), "mode": "original", "outputFormat": "wav", "wavDepth": "float32",
+            "bitrate": "256", "sampleRate": "", "ceiling": "-2", "silenceThreshold": "-40", "workers": "1",
+            "previewGains": {wav.name: "0"}, "previewMutes": {wav.name: True}, "applyPreviewGain": "on",
+            "enforceSafety": "off",
+        }
+        server.convert_job(self.job_id, options)
+        output = source / "normalized_audio" / "track.wav"
+        self.assertEqual(server.JOBS[self.job_id]["status"], "done", server.JOBS[self.job_id]["log"])
+        self.assertLess(server.peak_of_audio(output), -100.0)
 
     def test_relative_mode_without_safety_uses_selected_ceiling(self) -> None:
         source = self.root / "relative-no-safety"

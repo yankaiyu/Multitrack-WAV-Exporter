@@ -157,10 +157,23 @@ function syncSharedPlaybackPosition(sourceRow, time) {
     if (!audio) return;
     const bounds = previewBounds(row);
     const target = Math.max(bounds.start, Math.min(bounds.end, time));
-    if (Math.abs((audio.currentTime || 0) - target) > 0.01) audio.currentTime = target;
-    audio.dataset.previewPosition = String(target);
+    // Do not seek a shorter media element exactly to/past its duration. Safari
+    // can repeatedly emit ended/timeupdate events (and sometimes audible
+    // garbage) when a paused element is forced to its EOF. Keep its media
+    // position just inside the file, while the visual playhead still follows
+    // the shared time and clamps at the track boundary.
+    const mediaDuration = Number(audio.duration);
+    const mediaHasDuration = Number.isFinite(mediaDuration) && mediaDuration > 0;
+    if (!mediaHasDuration || target < mediaDuration - 0.001) {
+      if (Math.abs((audio.currentTime || 0) - target) > 0.01) audio.currentTime = target;
+      audio.dataset.previewPosition = String(target);
+    } else {
+      const safeTarget = Math.max(bounds.start, mediaDuration - 0.001);
+      if (Math.abs((audio.currentTime || 0) - safeTarget) > 0.01) audio.currentTime = safeTarget;
+      audio.dataset.previewPosition = String(target);
+    }
     row.querySelector(".playback-marker")?.classList.remove("hidden");
-    updatePlaybackMarker(row);
+    updatePlaybackMarkerAt(row, target);
   });
   syncingSharedPlayback = false;
 }
@@ -261,6 +274,18 @@ function updateTrackSelectionState(row) {
   }
 }
 
+function updatePreviewMuteButton(row) {
+  const button = row.querySelector(".track-preview-mute");
+  if (!button) return;
+  const muted = row.dataset.previewMuted === "true";
+  const label = t(muted ? "previewUnmute" : "previewMute");
+  button.textContent = muted ? "🔇" : "🔊";
+  button.title = label;
+  button.setAttribute("aria-label", label);
+  row.querySelectorAll(".track-preview-volume input").forEach((input) => { input.disabled = muted; });
+  row.classList.toggle("preview-muted", muted);
+}
+
 function previewBounds(row) {
   const duration = Number(row.dataset.duration);
   if ($("#individual-trim").checked) {
@@ -283,8 +308,14 @@ function updatePlaybackMarker(row) {
   const audio = row.querySelector(".track-preview-audio");
   const marker = row.querySelector(".playback-marker");
   if (!audio || !marker) return;
+  updatePlaybackMarkerAt(row, audio.currentTime);
+}
+
+function updatePlaybackMarkerAt(row, time) {
+  const marker = row.querySelector(".playback-marker");
+  if (!marker) return;
   const { start, end } = previewBounds(row);
-  const percent = end > start ? (audio.currentTime - start) / (end - start) * 100 : 0;
+  const percent = end > start ? (time - start) / (end - start) * 100 : 0;
   marker.style.left = `${Math.max(0, Math.min(100, percent))}%`;
 }
 
@@ -451,8 +482,10 @@ function renderWaveforms(preview) {
     const volume = document.createElement("label");
     volume.className = "track-preview-volume";
     volume.title = t("previewVolume");
-    volume.innerHTML = `<span class="track-preview-volume-icon" aria-hidden="true">🔊</span><input type="range" min="${PREVIEW_VOLUME_MIN}" max="${PREVIEW_VOLUME_MAX}" step="1" value="0" title="${t("previewVolume")}" aria-label="${t("previewVolume")}" /><span class="track-preview-volume-number-row"><input class="track-preview-volume-number" type="number" min="${PREVIEW_VOLUME_MIN}" max="${PREVIEW_VOLUME_MAX}" step="1" value="0" aria-label="${t("previewVolume")}" /><span class="track-preview-volume-unit">dB</span></span>`;
+    volume.innerHTML = `<button class="track-preview-mute" type="button" aria-label="${t("previewMute")}" title="${t("previewMute")}">🔊</button><input type="range" min="${PREVIEW_VOLUME_MIN}" max="${PREVIEW_VOLUME_MAX}" step="1" value="0" title="${t("previewVolume")}" aria-label="${t("previewVolume")}" /><span class="track-preview-volume-number-row"><input class="track-preview-volume-number" type="number" min="${PREVIEW_VOLUME_MIN}" max="${PREVIEW_VOLUME_MAX}" step="1" value="0" aria-label="${t("previewVolume")}" /><span class="track-preview-volume-unit">dB</span></span>`;
     row.querySelector(".wave-image-wrap").append(volume);
+    row.dataset.previewMuted = "false";
+    updatePreviewMuteButton(row);
   });
   const displayWaveformDuration = displayTimeLimit(waveformDuration);
   ["#trim-start-range", "#trim-end-range"].forEach((selector) => { $(selector).max = displayWaveformDuration; });
@@ -560,6 +593,9 @@ $("#convert-form").addEventListener("submit", async (event) => {
     payload.previewGains = Object.fromEntries([...previewGains].map((row) => [
       decodeURIComponent(row.dataset.track), row.querySelector(".track-preview-volume input[type=range]")?.value || "0",
     ]));
+    payload.previewMutes = Object.fromEntries([...previewGains].map((row) => [
+      decodeURIComponent(row.dataset.track), row.dataset.previewMuted === "true",
+    ]));
   }
   try {
     const result = await api("/api/convert", { method: "POST", body: JSON.stringify(payload) });
@@ -636,6 +672,17 @@ $("#waveforms").addEventListener("click", (event) => {
   button.textContent = t(collapsed ? "expandTrack" : "collapseTrack");
 });
 $("#waveforms").addEventListener("click", (event) => {
+  const muteButton = event.target.closest(".track-preview-mute");
+  if (muteButton) {
+    const row = muteButton.closest(".wave-track");
+    if (!row || row.classList.contains("is-deselected")) return;
+    row.dataset.previewMuted = String(row.dataset.previewMuted !== "true");
+    updatePreviewMuteButton(row);
+    applyPreviewAudioSettings(row, $("#preview-limiter"));
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
   const button = event.target.closest(".track-preview-button");
   if (button) {
     lastPreviewRow = button.closest(".wave-track");
@@ -736,6 +783,7 @@ document.addEventListener("languagechange", () => {
     button.title = t(collapsed ? "expandTrack" : "collapseTrack");
     button.textContent = t(collapsed ? "expandTrack" : "collapseTrack");
   });
+  document.querySelectorAll(".wave-track").forEach(updatePreviewMuteButton);
   refreshStatus().catch((error) => { $("#dependency-status").textContent = `${t("unable")}${error.message}`; });
 });
 
