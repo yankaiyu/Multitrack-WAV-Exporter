@@ -403,6 +403,9 @@ def _convert_job(job_id: str, options: dict) -> None:
         preview_gains = options.get("previewGains") or {}
         if not isinstance(preview_gains, dict):
             raise ValueError(localized(job_language(job_id), "invalidPreviewGains"))
+        preview_mutes = options.get("previewMutes") or {}
+        if not isinstance(preview_mutes, dict):
+            raise ValueError(localized(job_language(job_id), "invalidPreviewMutes"))
         output = source / "normalized_audio"
         output.mkdir(exist_ok=True)
         output_extension = OUTPUT_FORMATS[output_format]["extension"]
@@ -474,6 +477,8 @@ def _convert_job(job_id: str, options: dict) -> None:
                         raise ValueError(localized(job_language(job_id), "invalidPreviewGains"))
                     if not math.isfinite(value):
                         raise ValueError(localized(job_language(job_id), "invalidPreviewGains"))
+                    if apply_preview_gain and preview_mutes.get(file.name) in {True, "true", "on", "1"}:
+                        value = -120.0
                     gains[file] = value
                 if not enforce_safety:
                     append_localized_log(job_id, "originalLevelsNoSafety")
@@ -515,7 +520,7 @@ def _convert_job(job_id: str, options: dict) -> None:
                             raise ValueError(localized(job_language(job_id), "invalidPreviewGains"))
                         if not math.isfinite(preview_gain):
                             raise ValueError(localized(job_language(job_id), "invalidPreviewGains"))
-                        gains[file] += preview_gain
+                        gains[file] = -120.0 if preview_mutes.get(file.name) in {True, "true", "on", "1"} else gains[file] + preview_gain
                 append_localized_log(job_id, "normalizationGains", gains=", ".join(f"{file.name} {gain:+.2f} dB" for file, gain in gains.items()))
                 for _ in range(3 if enforce_safety else 1):
                     def encode_normalized(file: Path) -> None:

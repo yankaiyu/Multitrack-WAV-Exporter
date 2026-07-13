@@ -17,6 +17,7 @@
 - Added −0.1 dBFS and −0.3 dBFS final output safety-ceiling options for WAV, MP3, and M4A exports.
 - Added an abort button for running exports and a remembered option to open the output folder in Finder when complete.
 - Added linked or independent preview playheads, synchronized multi-track playback, and playhead reset controls.
+- Added per-track preview mute/unmute controls; muted preview tracks are exported muted only when preview-volume export is enabled.
 
 ### Safety and behavior
 
@@ -45,6 +46,7 @@
 - 增加 −0.1 dBFS 和 −0.3 dBFS 最终输出安全峰值选项，适用于 WAV、MP3 和 M4A 导出。
 - 增加转换中的取消按钮，以及完成后自动在 Finder 中打开输出文件夹的记忆选项。
 - 增加联动或独立试听播放头、同步多轨试听和播放头重置控制。
+- 增加每轨试听静音/取消静音按钮；只有启用“将试听音量应用到导出”时，试听静音状态才会影响导出。
 
 ### 安全与行为
 

@@ -48,6 +48,8 @@
     "collapseTrack": "−",
     "expandTrack": "+",
     "previewVolume": "試聽音量",
+    "previewMute": "在試聽中靜音此軌道",
+    "previewUnmute": "在試聽中取消此軌道靜音",
     "previewLimiter": "🛡️ 試聽安全限幅器",
     "previewLimiterHelp": "僅影響試聽，不會改變匯出檔案。",
     "selectAll": "✓ 全選",

@@ -47,6 +47,8 @@
     "collapseTrack": "−",
     "expandTrack": "+",
     "previewVolume": "Volume d’aperçu",
+    "previewMute": "Couper cette piste dans l’aperçu",
+    "previewUnmute": "Réactiver cette piste dans l’aperçu",
     "previewLimiter": "🛡️ Limiteur sécurisé d’aperçu",
     "previewLimiterHelp": "Agit uniquement sur la lecture, pas sur les fichiers exportés.",
     "selectAll": "✓ Tout sélectionner",

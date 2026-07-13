@@ -47,6 +47,8 @@
     "collapseTrack": "−",
     "expandTrack": "+",
     "previewVolume": "プレビュー音量",
+    "previewMute": "プレビューでこのトラックをミュート",
+    "previewUnmute": "プレビューでこのトラックのミュートを解除",
     "previewLimiter": "🛡️ プレビュー安全リミッター",
     "previewLimiterHelp": "再生にのみ適用され、書き出しファイルは変わりません。",
     "selectAll": "✓ すべて選択",

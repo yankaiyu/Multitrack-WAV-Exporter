@@ -47,6 +47,8 @@
     "collapseTrack": "−",
     "expandTrack": "+",
     "previewVolume": "미리듣기 볼륨",
+    "previewMute": "미리듣기에서 이 트랙 음소거",
+    "previewUnmute": "미리듣기에서 이 트랙 음소거 해제",
     "previewLimiter": "🛡️ 미리듣기 안전 리미터",
     "previewLimiterHelp": "재생에만 적용되며 내보낸 파일은 변경하지 않습니다.",
     "selectAll": "✓ 모두 선택",

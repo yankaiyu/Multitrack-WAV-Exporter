@@ -30,8 +30,9 @@ export function applyPreviewAudioSettings(row, limiterCheckbox) {
   const audio = row.querySelector(".track-preview-audio");
   const graph = audio && previewGraph(audio);
   if (!graph) return;
+  const muted = row.dataset.previewMuted === "true";
   const volume = Number(row.querySelector(".track-preview-volume input[type=range]")?.value) || 0;
-  graph.gain.gain.value = Math.pow(10, volume / 20);
+  graph.gain.gain.value = muted ? 0 : Math.pow(10, volume / 20);
   const enabled = limiterCheckbox?.checked ?? true;
   graph.limiter.threshold.value = enabled ? -1 : 0;
   graph.limiter.ratio.value = enabled ? 20 : 1;

@@ -47,6 +47,8 @@
     "collapseTrack": "−",
     "expandTrack": "+",
     "previewVolume": "Volumen de preescucha",
+    "previewMute": "Silenciar esta pista en la preescucha",
+    "previewUnmute": "Activar esta pista en la preescucha",
     "previewLimiter": "🛡️ Limitador seguro de preescucha",
     "previewLimiterHelp": "Solo afecta a la reproducción, no a los archivos exportados.",
     "selectAll": "✓ Seleccionar todo",
