@@ -19,9 +19,11 @@ To add a UI language, add a complete `web/locales/<code>.json` file; the app dis
 
 ## Interface preview
 
-![Waveform preview and individual trim — synthetic demo data](docs/screenshots/waveform-trim.jpg)
+![Export settings and trim controls — synthetic demo data](docs/screenshots/overview-top.png)
 
-![Export settings — synthetic demo data](docs/screenshots/export-settings.jpg)
+![Waveform preview, playheads, and per-track audition — synthetic demo data](docs/screenshots/overview-waveforms.png)
+
+![Level processing and output settings — synthetic demo data](docs/screenshots/overview-export.png)
 
 ## Quick start
 
